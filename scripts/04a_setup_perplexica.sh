@@ -8,7 +8,9 @@ source "$(dirname "$0")/utils.sh"
 # Get project root
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." &> /dev/null && pwd )"
-ENV_FILE="$PROJECT_ROOT/.env"
+
+resolve_env_context "$PROJECT_ROOT"
+ENV_FILE="$LAUNCHKIT_ENV_FILE"
 
 # Check if perplexica is in COMPOSE_PROFILES
 if [ -f "$ENV_FILE" ]; then

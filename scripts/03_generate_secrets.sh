@@ -19,6 +19,27 @@ OUTPUT_FILE="$PROJECT_ROOT/.env"
 ENV_FILE="$OUTPUT_FILE"
 DOMAIN_PLACEHOLDER="yourdomain.com"
 
+# Optional CLI: --env-file /path/to/env to override output target
+ENV_FILE_OVERRIDE=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --env-file)
+            ENV_FILE_OVERRIDE="$2"; shift 2;;
+        *)
+            shift;;
+    esac
+done
+
+# Apply overrides/env var for output location
+if [[ -n "$LAUNCHKIT_ENV_FILE" ]]; then
+    OUTPUT_FILE="$LAUNCHKIT_ENV_FILE"
+fi
+if [[ -n "$ENV_FILE_OVERRIDE" ]]; then
+    OUTPUT_FILE="$ENV_FILE_OVERRIDE"
+fi
+ENV_FILE="$OUTPUT_FILE"
+log_info "Using env file: $OUTPUT_FILE"
+
 # Variables to generate: varName="type:length"
 # Types: password (alphanum), secret (base64), hex, base64, alphanum
 declare -A VARS_TO_GENERATE=(

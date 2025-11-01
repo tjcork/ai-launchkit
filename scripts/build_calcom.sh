@@ -1,6 +1,13 @@
 #!/bin/bash
 set -e
 
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." &> /dev/null && pwd )"
+
+source "$SCRIPT_DIR/utils.sh"
+resolve_env_context "$PROJECT_ROOT"
+ENV_FILE="$LAUNCHKIT_ENV_FILE"
+
 echo "========================================="
 echo "Building Cal.com Docker image..."
 echo "This will take 10-15 minutes on first build..."
@@ -43,17 +50,17 @@ fi
 # --- End of Patch-Blocks ---
 
 
-# Copy our .env values to build environment
-if [ -f "../.env" ]; then
+# Copy our env values to build environment
+if [ -f "$ENV_FILE" ]; then
     echo "Using configuration from parent .env..."
 
     # Extract necessary variables
-    DOMAIN=$(grep "^USER_DOMAIN_NAME=" ../.env | cut -d '=' -f2 | tr -d '"')
-    POSTGRES_PASSWORD=$(grep "^POSTGRES_PASSWORD=" ../.env | cut -d '=' -f2 | tr -d '"')
+    DOMAIN=$(grep "^USER_DOMAIN_NAME=" "$ENV_FILE" | cut -d '=' -f2 | tr -d '"')
+    POSTGRES_PASSWORD=$(grep "^POSTGRES_PASSWORD=" "$ENV_FILE" | cut -d '=' -f2 | tr -d '"')
 
     # Google Calendar Integration
-    GOOGLE_CLIENT_ID=$(sed -n "s/^GOOGLE_CLIENT_ID=//p" ../.env | sed "s/['\"]//g")
-    GOOGLE_CLIENT_SECRET=$(sed -n "s/^GOOGLE_CLIENT_SECRET=//p" ../.env | sed "s/['\"]//g")
+    GOOGLE_CLIENT_ID=$(sed -n "s/^GOOGLE_CLIENT_ID=//p" "$ENV_FILE" | sed "s/['"]//g")
+    GOOGLE_CLIENT_SECRET=$(sed -n "s/^GOOGLE_CLIENT_SECRET=//p" "$ENV_FILE" | sed "s/['"]//g")
 
     if [[ -n "$GOOGLE_CLIENT_ID" && -n "$GOOGLE_CLIENT_SECRET" ]]; then
         echo "Adding Google Calendar credentials..."

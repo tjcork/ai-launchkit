@@ -6,7 +6,9 @@ source "$(dirname "$0")/utils.sh"
 # Get script and project directories
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-ENV_FILE="$PROJECT_ROOT/.env"
+
+resolve_env_context "$PROJECT_ROOT"
+ENV_FILE="$LAUNCHKIT_ENV_FILE"
 
 # Function to check if a profile is active
 is_profile_active() {

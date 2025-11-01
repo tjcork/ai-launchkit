@@ -31,6 +31,12 @@ fi
 # Get the directory where this script is located (which is the scripts directory)
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
+# Determine project root and resolve environment context
+PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." &> /dev/null && pwd )"
+resolve_env_context "$PROJECT_ROOT"
+ENV_FILE="$LAUNCHKIT_ENV_FILE"
+PROJECT_NAME="$LAUNCHKIT_PROJECT_NAME"
+
 # Check if all required scripts exist and are executable in the current directory
 required_scripts=(
     "01_system_preparation.sh"
@@ -90,7 +96,7 @@ bash "$SCRIPT_DIR/02_install_docker.sh" || { log_error "Docker Installation fail
 log_success "Docker installation complete!"
 
 log_info "========== STEP 3: Generating Secrets and Configuration =========="
-bash "$SCRIPT_DIR/03_generate_secrets.sh" || { log_error "Secret/Config Generation failed"; exit 1; }
+bash "$SCRIPT_DIR/03_generate_secrets.sh" --env-file "$ENV_FILE" || { log_error "Secret/Config Generation failed"; exit 1; }
 log_success "Secret/Config Generation complete!"
 
 log_info "========== STEP 4: Running Service Selection Wizard =========="
@@ -103,7 +109,7 @@ log_success "Perplexica setup complete!"
 
 log_info "========== STEP 4b: Building Cal.com (if selected) =========="
 # Check if calcom profile is in COMPOSE_PROFILES
-if grep -q "calcom" .env 2>/dev/null || [[ "$COMPOSE_PROFILES" == *"calcom"* ]]; then
+if grep -q "calcom" "$ENV_FILE" 2>/dev/null || [[ "$COMPOSE_PROFILES" == *"calcom"* ]]; then
     if [ -f "$SCRIPT_DIR/build_calcom.sh" ]; then
         log_info "Cal.com selected - preparing build..."
         bash "$SCRIPT_DIR/build_calcom.sh" || { log_error "Cal.com build preparation failed"; exit 1; }
@@ -121,13 +127,13 @@ log_success "Running Services complete!"
 
 log_info "========== STEP 5a: Setting up Docker-Mailserver (if selected) =========="
 # Check if mailserver profile is in COMPOSE_PROFILES
-if grep -q "mailserver" .env 2>/dev/null || [[ "$COMPOSE_PROFILES" == *"mailserver"* ]]; then
+if grep -q "mailserver" "$ENV_FILE" 2>/dev/null || [[ "$COMPOSE_PROFILES" == *"mailserver"* ]]; then
     if docker ps | grep -q mailserver; then
         log_info "Generating DKIM keys for Docker-Mailserver..."
         sleep 15  # Wait for container to be fully ready
         
         # Load BASE_DOMAIN from .env
-        BASE_DOMAIN=$(grep "^BASE_DOMAIN=" .env | cut -d'=' -f2 | tr -d '"' | tr -d "'")
+        BASE_DOMAIN=$(grep "^BASE_DOMAIN=" "$ENV_FILE" | cut -d'=' -f2 | tr -d '"' | tr -d "'")
         
         # Generate DKIM
         docker exec mailserver setup config dkim 2>&1 | tee dkim_generation.log || true
@@ -150,7 +156,7 @@ log_success "Mailserver setup step complete!"
 # Create noreply account
 if docker ps | grep -q mailserver; then
     log_info "Creating noreply email account..."
-    MAIL_NOREPLY_PASSWORD=$(grep "^MAIL_NOREPLY_PASSWORD=" .env | cut -d'=' -f2 | tr -d '"' | tr -d "'")
+    MAIL_NOREPLY_PASSWORD=$(grep "^MAIL_NOREPLY_PASSWORD=" "$ENV_FILE" | cut -d'=' -f2 | tr -d '"' | tr -d "'")
     if [[ -n "$MAIL_NOREPLY_PASSWORD" ]]; then
         docker exec mailserver setup email add noreply@${BASE_DOMAIN} ${MAIL_NOREPLY_PASSWORD} 2>/dev/null || true
         log_success "Email account noreply@${BASE_DOMAIN} created"
@@ -158,7 +164,7 @@ if docker ps | grep -q mailserver; then
 fi
 
 # Setup Google Calendar AFTER STARTED SERVICES
-if grep -q "calcom" .env 2>/dev/null && [ -f "$SCRIPT_DIR/setup_calcom_google.sh" ]; then
+if grep -q "calcom" "$ENV_FILE" 2>/dev/null && [ -f "$SCRIPT_DIR/setup_calcom_google.sh" ]; then
     log_info "Configuring Google Calendar for Cal.com..."
     sleep 30
     bash "$SCRIPT_DIR/setup_calcom_google.sh" || true
@@ -181,25 +187,25 @@ bash "$SCRIPT_DIR/06_final_report.sh" || { log_error "Final Report Generation fa
 log_success "Final Report Generation complete!"
 
 # Workaround: Ensure Supabase DB starts if Supabase was selected
-if grep -q "supabase" .env 2>/dev/null; then
+if grep -q "supabase" "$ENV_FILE" 2>/dev/null; then
     echo "Ensuring Supabase database container is running..."
-    sudo docker compose -p localai -f supabase/docker/docker-compose.yml up -d db 2>/dev/null || true
+    sudo docker compose -p "$PROJECT_NAME" -f "$PROJECT_ROOT/supabase/docker/docker-compose.yml" up -d db 2>/dev/null || true
 fi
 
 # Workaround: Ensure LibreTranslate starts properly if selected
-if grep -q "libretranslate" .env 2>/dev/null || docker ps -a | grep -q libretranslate; then
+if grep -q "libretranslate" "$ENV_FILE" 2>/dev/null || docker ps -a | grep -q libretranslate; then
     echo "Ensuring LibreTranslate container is running properly..."
-    sudo docker compose -p localai stop libretranslate 2>/dev/null || true
-    sudo docker compose -p localai rm -f libretranslate 2>/dev/null || true
-    sudo docker compose -p localai --profile libretranslate up -d libretranslate 2>/dev/null || true
+    sudo docker compose -p "$PROJECT_NAME" stop libretranslate 2>/dev/null || true
+    sudo docker compose -p "$PROJECT_NAME" rm -f libretranslate 2>/dev/null || true
+    sudo docker compose -p "$PROJECT_NAME" --profile libretranslate up -d libretranslate 2>/dev/null || true
 fi
 
 # Generate Vaultwarden import file if Vaultwarden is active
 if [ -f "$SCRIPT_DIR/08_generate_vaultwarden_json.sh" ]; then
     # Load environment variables from .env
-    if [ -f "$PROJECT_ROOT/.env" ]; then
+    if [ -f "$ENV_FILE" ]; then
         set -a
-        source "$PROJECT_ROOT/.env"
+        source "$ENV_FILE"
         set +a
     fi
     

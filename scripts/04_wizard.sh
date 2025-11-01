@@ -6,10 +6,13 @@
 # and .env is in the parent directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-ENV_FILE="$PROJECT_ROOT/.env"
 
 # Source the utilities file
 source "$(dirname "$0")/utils.sh"
+
+# Resolve env/project context
+resolve_env_context "$PROJECT_ROOT"
+ENV_FILE="$LAUNCHKIT_ENV_FILE"
 
 # UTILS_SCRIPT="$SCRIPT_DIR/utils.sh" # Uncomment if utils.sh contains relevant functions
 

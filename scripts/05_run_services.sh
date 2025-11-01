@@ -5,9 +5,18 @@ set -e
 # Source the utilities file
 source "$(dirname "$0")/utils.sh"
 
-# 1. Check for .env file
-if [ ! -f ".env" ]; then
-  log_error ".env file not found in project root." >&2
+# Script metadata
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." &> /dev/null && pwd )"
+
+# Resolve environment context
+resolve_env_context "$PROJECT_ROOT"
+ENV_FILE="$LAUNCHKIT_ENV_FILE"
+PROJECT_NAME="$LAUNCHKIT_PROJECT_NAME"
+
+# 1. Check for env file
+if [ ! -f "$ENV_FILE" ]; then
+  log_error "Env file not found at $ENV_FILE." >&2
   exit 1
 fi
 

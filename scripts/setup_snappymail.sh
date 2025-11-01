@@ -5,6 +5,11 @@
 set -e
 source "$(dirname "$0")/utils.sh"
 
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." &> /dev/null && pwd )"
+resolve_env_context "$PROJECT_ROOT"
+ENV_FILE="$LAUNCHKIT_ENV_FILE"
+
 # Check if SnappyMail is running
 if ! docker ps | grep -q snappymail; then
     log_info "SnappyMail not running, skipping configuration"
@@ -12,7 +17,7 @@ if ! docker ps | grep -q snappymail; then
 fi
 
 # Get domain from .env
-BASE_DOMAIN=$(grep "^BASE_DOMAIN=" .env | cut -d'=' -f2 | tr -d '"')
+BASE_DOMAIN=$(grep "^BASE_DOMAIN=" "$ENV_FILE" | cut -d'=' -f2 | tr -d '"')
 
 if [ -z "$BASE_DOMAIN" ]; then
     log_error "BASE_DOMAIN not found in .env"

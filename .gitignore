@@ -2,6 +2,7 @@
 .env
 .env.bak
 .env.test
+.env.save
 neo4j/
 searxng/settings.yml
 searxng/uwsgi*

@@ -49,3 +49,28 @@ log_info() {
     local combined_message="[INFO] ${timestamp}: ${message}"
     log_message "${combined_message}"
 }
+
+resolve_env_context() {
+    local project_root="$1"
+    if [ -z "$project_root" ]; then
+        log_error "resolve_env_context requires project root path"
+        exit 1
+    fi
+
+    local default_env_file="$project_root/.env"
+
+    if [ -z "$LAUNCHKIT_ENV_FILE" ]; then
+        LAUNCHKIT_ENV_FILE="$default_env_file"
+    fi
+
+    if [ -z "$LAUNCHKIT_PROJECT_NAME" ] && [ -f "$LAUNCHKIT_ENV_FILE" ]; then
+        LAUNCHKIT_PROJECT_NAME=$(grep -E '^PROJECT_NAME=' "$LAUNCHKIT_ENV_FILE" | tail -n1 | cut -d'=' -f2- | tr -d '"' | xargs)
+    fi
+
+    if [ -z "$LAUNCHKIT_PROJECT_NAME" ]; then
+        LAUNCHKIT_PROJECT_NAME="localai"
+    fi
+
+    export LAUNCHKIT_ENV_FILE
+    export LAUNCHKIT_PROJECT_NAME
+}

@@ -14,6 +14,11 @@ PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." &> /dev/null && pwd )"
 # Path to the apply_update.sh script
 APPLY_UPDATE_SCRIPT="$SCRIPT_DIR/apply_update.sh"
 
+# Resolve env/project context
+resolve_env_context "$PROJECT_ROOT"
+ENV_FILE="$LAUNCHKIT_ENV_FILE"
+PROJECT_NAME="$LAUNCHKIT_PROJECT_NAME"
+
 # Check if apply update script exists
 if [ ! -f "$APPLY_UPDATE_SCRIPT" ]; then
     log_error "Crucial update script $APPLY_UPDATE_SCRIPT not found. Cannot proceed."
@@ -53,7 +58,7 @@ fi
 
 # Build Cal.com if selected (needed for updates)
 log_info "Checking if Cal.com needs to be built..."
-if grep -q "calcom" "$PROJECT_ROOT/.env" 2>/dev/null || [[ "$COMPOSE_PROFILES" == *"calcom"* ]]; then
+if grep -q "calcom" "$ENV_FILE" 2>/dev/null || [[ "$COMPOSE_PROFILES" == *"calcom"* ]]; then
     if [ -f "$SCRIPT_DIR/build_calcom.sh" ]; then
         log_info "Cal.com detected - preparing build..."
         bash "$SCRIPT_DIR/build_calcom.sh" || { log_error "Cal.com build preparation failed"; exit 1; }
@@ -69,18 +74,18 @@ fi
 bash "$APPLY_UPDATE_SCRIPT"
 
 # Workaround: Ensure Supabase DB starts if Supabase was selected
-if grep -q "supabase" "$PROJECT_ROOT/.env" 2>/dev/null; then
+if grep -q "supabase" "$ENV_FILE" 2>/dev/null; then
     log_info "Ensuring Supabase database container is running..."
     cd "$PROJECT_ROOT" || true
-    sudo docker compose -p localai -f supabase/docker/docker-compose.yml up -d db 2>/dev/null || true
+    sudo docker compose -p "$PROJECT_NAME" -f "$PROJECT_ROOT/supabase/docker/docker-compose.yml" up -d db 2>/dev/null || true
 fi
 
 # Workaround: Ensure LibreTranslate starts properly if selected
-if grep -q "libretranslate" "$PROJECT_ROOT/.env" 2>/dev/null || docker ps -a | grep -q libretranslate; then
+if grep -q "libretranslate" "$ENV_FILE" 2>/dev/null || docker ps -a | grep -q libretranslate; then
     log_info "Ensuring LibreTranslate container is running properly..."
-    sudo docker compose -p localai stop libretranslate 2>/dev/null || true
-    sudo docker compose -p localai rm -f libretranslate 2>/dev/null || true
-    sudo docker compose -p localai --profile libretranslate up -d libretranslate 2>/dev/null || true
+    sudo docker compose -p "$PROJECT_NAME" stop libretranslate 2>/dev/null || true
+    sudo docker compose -p "$PROJECT_NAME" rm -f libretranslate 2>/dev/null || true
+    sudo docker compose -p "$PROJECT_NAME" --profile libretranslate up -d libretranslate 2>/dev/null || true
 fi
 
 # The final success message will now come from apply_update.sh

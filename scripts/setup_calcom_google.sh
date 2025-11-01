@@ -1,9 +1,16 @@
 #!/bin/bash
 
-# Check if Google credentials are in .env
-GOOGLE_CLIENT_ID=$(grep "^GOOGLE_CLIENT_ID=" .env | cut -d '=' -f2 | tr -d '"')
-GOOGLE_CLIENT_SECRET=$(grep "^GOOGLE_CLIENT_SECRET=" .env | cut -d '=' -f2 | tr -d '"')
-DOMAIN=$(grep "^USER_DOMAIN_NAME=" .env | cut -d '=' -f2 | tr -d '"')
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." &> /dev/null && pwd )"
+
+source "$SCRIPT_DIR/utils.sh"
+resolve_env_context "$PROJECT_ROOT"
+ENV_FILE="$LAUNCHKIT_ENV_FILE"
+
+# Check if Google credentials are in env file
+GOOGLE_CLIENT_ID=$(grep "^GOOGLE_CLIENT_ID=" "$ENV_FILE" | cut -d '=' -f2 | tr -d '"')
+GOOGLE_CLIENT_SECRET=$(grep "^GOOGLE_CLIENT_SECRET=" "$ENV_FILE" | cut -d '=' -f2 | tr -d '"')
+DOMAIN=$(grep "^USER_DOMAIN_NAME=" "$ENV_FILE" | cut -d '=' -f2 | tr -d '"')
 
 if [[ -n "$GOOGLE_CLIENT_ID" && -n "$GOOGLE_CLIENT_SECRET" ]]; then
     echo "Setting up Google Calendar integration in Cal.com database..."

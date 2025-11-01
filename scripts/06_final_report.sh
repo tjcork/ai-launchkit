@@ -8,7 +8,10 @@ source "$(dirname "$0")/utils.sh"
 # Get the directory where the script resides
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." &> /dev/null && pwd )"
-ENV_FILE="$PROJECT_ROOT/.env"
+
+resolve_env_context "$PROJECT_ROOT"
+ENV_FILE="$LAUNCHKIT_ENV_FILE"
+PROJECT_NAME="$LAUNCHKIT_PROJECT_NAME"
 
 # Check if .env file exists
 if [ ! -f "$ENV_FILE" ]; then
@@ -974,7 +977,7 @@ if is_profile_active "python-runner"; then
   echo "Mounted Code Directory: ./python-runner (host) -> /app (container)"
   echo "Entry File: /app/main.py"
   echo "(Note: Internal-only service with no exposed ports; view output via logs)"
-  echo "Logs: docker compose -p localai logs -f python-runner"
+  echo "Logs: docker compose -p ${PROJECT_NAME} logs -f python-runner"
 fi
 
 if is_profile_active "n8n" || is_profile_active "langfuse"; then
@@ -1122,7 +1125,7 @@ echo
 echo "To switch between mail handlers:"
 echo "  1. Edit .env file: MAIL_MODE=mailpit"
 echo "  2. Update SMTP_* variables accordingly"
-echo "  3. Restart services: docker compose -p localai restart"
+echo "  3. Restart services: docker compose -p ${PROJECT_NAME} restart"
 echo
 
 echo

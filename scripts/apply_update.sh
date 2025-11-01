@@ -17,7 +17,11 @@ RUN_SERVICES_SCRIPT="$SCRIPT_DIR/05_run_services.sh"
 # Compose files (Not strictly needed here unless used directly, but good for context)
 # MAIN_COMPOSE_FILE="$PROJECT_ROOT/docker-compose.yml"
 # SUPABASE_COMPOSE_FILE="$PROJECT_ROOT/supabase/docker/docker-compose.yml"
-ENV_FILE="$PROJECT_ROOT/.env"
+
+# Resolve env/project context and export for child scripts
+resolve_env_context "$PROJECT_ROOT"
+ENV_FILE="$LAUNCHKIT_ENV_FILE"
+PROJECT_NAME="$LAUNCHKIT_PROJECT_NAME"
 
 # Check if run services script exists
 if [ ! -f "$RUN_SERVICES_SCRIPT" ]; then
@@ -29,7 +33,7 @@ cd "$PROJECT_ROOT"
 
 # --- Call 03_generate_secrets.sh in update mode --- 
 log_info "Ensuring .env file is up-to-date with all variables..."
-bash "$SCRIPT_DIR/03_generate_secrets.sh" --update || {
+bash "$SCRIPT_DIR/03_generate_secrets.sh" --env-file "$ENV_FILE" --update || {
     log_error "Failed to update .env configuration via 03_generate_secrets.sh. Update process cannot continue."
     exit 1
 }
@@ -68,9 +72,9 @@ if [ -d "$DIFY_DOCKER_DIR" ] && [ -f "$DIFY_COMPOSE_FILE_PATH" ]; then
     COMPOSE_FILES_FOR_PULL+=("-f" "$DIFY_COMPOSE_FILE_PATH")
 fi
 
-# Use the project name "localai" for consistency.
+# Use the configured project name for consistency across compose commands.
 # This command WILL respect COMPOSE_PROFILES from the .env file (updated by the wizard above).
-$COMPOSE_CMD -p "localai" "${COMPOSE_FILES_FOR_PULL[@]}" pull --ignore-buildable || {
+$COMPOSE_CMD -p "$PROJECT_NAME" "${COMPOSE_FILES_FOR_PULL[@]}" pull --ignore-buildable || {
   log_error "Failed to pull Docker images for selected services. Check network connection and Docker Hub status."
   exit 1
 }
