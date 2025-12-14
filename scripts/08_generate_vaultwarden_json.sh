@@ -1,5 +1,26 @@
 #!/bin/bash
 
+# ============================================================================
+# Generate Vaultwarden JSON & Download Script
+# ============================================================================
+# This script generates a Vaultwarden-compatible JSON import file
+# with all AI LaunchKit service credentials and optionally provides
+# a download link.
+#
+# Usage:
+#   sudo bash ./scripts/08_generate_vaultwarden_json.sh           # Generate only
+#   sudo bash ./scripts/08_generate_vaultwarden_json.sh -d        # Generate + Download
+#   sudo bash ./scripts/08_generate_vaultwarden_json.sh --download # Generate + Download
+#
+# Note: File is automatically deleted after successful download
+# ============================================================================
+
+# Parse command line arguments for download option
+AUTO_DOWNLOAD=false
+if [[ "$1" == "-d" ]] || [[ "$1" == "--download" ]]; then
+    AUTO_DOWNLOAD=true
+fi
+
 # Source utilities
 source "$(dirname "$0")/utils.sh"
 
@@ -175,6 +196,23 @@ EOF
             "CreateOnFirstLogin123!" \
             "https://${N8N_HOSTNAME}" \
             "Main workflow automation platform. Create admin account on first access."
+    fi
+
+    # Webhook Tester
+    if is_profile_active "webhook-testing"; then
+        add_login_item \
+            "Webhook Tester - Debug Incoming Webhooks" \
+            "${WEBHOOK_TESTER_USERNAME}" \
+            "${WEBHOOK_TESTER_PASSWORD}" \
+            "https://${WEBHOOK_TESTER_HOSTNAME}" \
+            "Webhook debugging tool for receiving and inspecting webhooks. Protected with Basic Auth."
+        
+        add_login_item \
+            "Hoppscotch - API Testing Platform" \
+            "CreateAccountFirst@example.com" \
+            "ChooseYourPassword123!" \
+            "https://${HOPPSCOTCH_HOSTNAME}" \
+            "API testing platform with REST/GraphQL/WebSocket support. Create account on first access. Admin dashboard at /admin (first user becomes admin)."
     fi
 
     # Flowise
@@ -358,6 +396,39 @@ EOF
             "Open-source Airtable alternative with smart spreadsheet UI. Admin account uses your email address. Generate API tokens in user settings for n8n integration. Internal API: http://nocodb:8080"
     fi
 
+    # Seafile
+    if is_profile_active "seafile"; then
+        add_login_item \
+            "Seafile - File Sync & Share" \
+            "${SEAFILE_ADMIN_EMAIL}" \
+            "${SEAFILE_ADMIN_PASSWORD}" \
+            "https://${SEAFILE_HOSTNAME}" \
+            "Professional file sync and share platform (Dropbox alternative). Desktop/mobile apps available at seafile.com/download. WebDAV: https://${SEAFILE_HOSTNAME}/seafdav. Community n8n node: n8n-nodes-seafile. Internal API: http://seafile:80"
+    fi
+
+    # Paperless-ngx
+    if is_profile_active "paperless"; then
+        add_login_item \
+            "Paperless-ngx - Document Management" \
+            "${PAPERLESS_ADMIN_EMAIL}" \
+            "${PAPERLESS_ADMIN_PASSWORD}" \
+            "https://${PAPERLESS_HOSTNAME}" \
+            "Intelligent document management with OCR and AI tagging. Supports German & English OCR. Mobile apps: 'Paperless Mobile' on iOS/Android. Consume folder: ./shared. Internal API: http://paperless:8000/api/. Generate API token in user settings for n8n integration."
+    fi
+
+    # Paperless-GPT (OCR Enhancement)
+    if is_profile_active "paperless-ai"; then
+        add_login_item \
+            "Paperless-GPT - LLM-powered OCR" \
+            "${PAPERLESS_GPT_USERNAME}" \
+            "${PAPERLESS_GPT_PASSWORD}" \
+            "https://${PAPERLESS_GPT_HOSTNAME}" \
+            "Superior OCR with Vision LLMs for Paperless-ngx. Uses OpenAI GPT-4o or local Ollama models. Manual review at /manual, OCR status at /ocr. Protected with Basic Auth via Caddy. Internal API: http://paperless-gpt:8080"
+    fi
+    
+    # Note: Paperless-AI not included here as it has its own authentication system
+    # Users must set up credentials on first access to paperless-ai
+
     # Perplexica
     if is_profile_active "perplexica"; then
         add_login_item \
@@ -366,6 +437,37 @@ EOF
             "${PERPLEXICA_PASSWORD}" \
             "https://${PERPLEXICA_HOSTNAME}" \
             "Open-source Perplexity AI alternative. Protected with Basic Auth."
+    fi
+
+    # GPT Researcher
+    if is_profile_active "research" || is_profile_active "gpt-researcher"; then
+        add_login_item \
+            "GPT Researcher - Autonomous Research Agent" \
+            "${GPTR_USERNAME}" \
+            "${GPTR_PASSWORD}" \
+            "https://${GPTR_HOSTNAME}" \
+            "Autonomous research agent that generates comprehensive 2000+ word reports with citations. Uses local Ollama and SearXNG. Protected with Basic Auth. Internal Backend: http://gpt-researcher:8000, Frontend: http://gpt-researcher-ui:3000"
+    fi
+
+    # Research Tools Configuration
+    if (is_profile_active "research" || is_profile_active "gpt-researcher") || (is_profile_active "research" || is_profile_active "local-deep-research"); then
+        add_secure_note \
+            "Research Tools Configuration" \
+            "GPT Researcher:\\n- Search: ${GPTR_RETRIEVER:-searx} via SearXNG\\n- LLM: ${GPTR_LLM_PROVIDER:-ollama}\\n- Model: ${OLLAMA_MODEL:-qwen2.5:7b-instruct-q4_K_M}\\n- Report Length: ${GPTR_TOTAL_WORDS:-2000} words\\n- Format: ${GPTR_REPORT_FORMAT:-APA}\\n\\nLocal Deep Research:\\n- Search: ${LDR_SEARCH_API:-searxng}\\n- LLM: ${LDR_LLM_PROVIDER:-ollama}\\n- Model: ${LDR_LOCAL_MODEL:-qwen2.5:7b-instruct-q4_K_M}\\n- Research Loops: ${LDR_MAX_LOOPS:-5}\\n\\nn8n Integration:\\nGPT Researcher: POST http://gpt-researcher:8000/api/research\\nLocal Deep Research: POST http://local-deep-research:2024/api/research\\n\\nBoth tools use your existing Ollama (http://ollama:11434) and SearXNG installations!"
+    fi
+
+    # Open Notebook
+    if is_profile_active "opennotebook"; then
+        add_secure_note \
+            "Open Notebook - AI Knowledge Management" \
+            "URL: https://${OPENNOTEBOOK_HOSTNAME}\\nPassword: ${OPENNOTEBOOK_PASSWORD}\\n\\nPrivacy-First Alternative zu Google NotebookLM\\n\\nAuthentication:\\n- Native Open Notebook password system\\n- Enter password on first visit\\n- No separate username required\\n\\nFeatures:\\n- Multi-Modal Content: PDFs, videos, audio, web pages, Office docs\\n- 16+ AI Providers: OpenAI, Anthropic, Ollama, Google, Groq, etc.\\n- Podcast Generation: 1-4 custom speakers\\n- Smart Search: Full-text + vector search\\n- Context-Aware Chat: AI conversations with your research\\n\\nn8n Integration (Internal API):\\nBase URL: http://opennotebook:5055\\nAPI Docs: http://opennotebook:5055/docs\\nNo auth required (internal Docker network)\\n\\nEndpoints:\\n- GET /api/notebooks\\n- POST /api/notebooks\\n- POST /api/sources\\n- POST /api/chat\\n\\nData Storage:\\n- Notebooks: ./opennotebook/notebook_data\\n- Database: ./opennotebook/surreal_data\\n- Shared: ./shared\\n\\nAI Configuration:\\nUsing shared keys: OPENAI_API_KEY, ANTHROPIC_API_KEY, GROQ_API_KEY\\nConfigure models in Settings → Models (Web UI)\\nSupports Ollama: http://ollama:11434\\n\\nDocumentation: https://www.open-notebook.ai\\nGitHub: https://github.com/lfnovo/open-notebook"
+    fi
+
+    # LiveKit
+    if is_profile_active "livekit"; then
+        add_secure_note \
+            "LiveKit Real-Time Communication" \
+            "WebSocket URL: wss://${LIVEKIT_HOSTNAME}\\nAPI Key: ${LIVEKIT_API_KEY}\\nAPI Secret: ${LIVEKIT_API_SECRET}\\n\\nAuthentication: JWT-based (no login UI)\\nGenerate access tokens using API Key/Secret\\n\\nInternal Access:\\n- WebSocket: ws://livekit-server:7880\\n- HTTP API: http://livekit-server:7881\\n\\nNetwork Requirements:\\n- UDP Ports: 50000-50100\\n- TCP Port: 7882\\n\\nn8n Integration:\\n1. Install LiveKit SDK: npm install livekit-server-sdk\\n2. Use API Key/Secret to generate JWT tokens\\n3. Pass tokens to client applications\\n\\nUse Cases:\\n- Voice chat applications\\n- Video conferencing\\n- AI voice agents (like ChatGPT)\\n\\nDocumentation: https://docs.livekit.io/"
     fi
 
     # Add important secure notes
@@ -389,6 +491,13 @@ EOF
         add_secure_note \
             "Scriberr AI Audio Transcription" \
             "URL: https://${SCRIBERR_HOSTNAME}\\nAI-powered audio transcription with WhisperX and speaker diarization.\\n\\nScriberr has its own authentication system:\\n- Create account on first access\\n- Generate API keys in the UI for automation\\n\\nModel: ${SCRIBERR_WHISPER_MODEL}\\nInternal API: http://scriberr:8080/api\\n\\nFeatures:\\n- Speaker detection (who said what)\\n- YouTube link transcription\\n- AI summaries with OpenAI/Anthropic"
+    fi
+
+    # TTS Chatterbox
+    if is_profile_active "tts-chatterbox"; then
+        add_secure_note \
+            "TTS Chatterbox - Advanced Text-to-Speech" \
+            "URL: https://${CHATTERBOX_HOSTNAME}\\nAPI Key: ${CHATTERBOX_API_KEY}\\nDevice: ${CHATTERBOX_DEVICE:-cpu}\\nEmotion Level: ${CHATTERBOX_EXAGGERATION:-0.5}\\n\\nAPI Endpoints:\\n- OpenAI Compatible: POST /v1/audio/speech\\n- Health: GET /health\\n- Voices: GET /v1/voices\\n- Clone: POST /v1/voice/clone\\n\\nInternal Access: http://chatterbox-tts:4123\\n\\nn8n Integration:\\nHTTP Request node: http://chatterbox-tts:4123/v1/audio/speech\\nHeader: X-API-Key: ${CHATTERBOX_API_KEY}\\n\\nVoice Cloning:\\n1. Place samples in ./shared/tts/voices/\\n2. 10-30 second audio files\\n3. Formats: wav, mp3, ogg, flac\\n\\nPerformance: Outperforms ElevenLabs with emotion control"
     fi
 
     # Stirling-PDF
@@ -442,78 +551,112 @@ AI LAUNCHKIT VAULTWARDEN IMPORT INSTRUCTIONS
 Your credentials file has been generated:
   📁 ai-launchkit-credentials.json
 
-HOW TO DOWNLOAD THE FILE FROM YOUR VPS:
-----------------------------------------
-
-Option 1: Using SCP (from your local computer):
-  scp username@your-server:/home/username/ai-launchkit/ai-launchkit-credentials.json ./
-
-Option 2: Using Python HTTP Server (temporary):
-  # On VPS:
-  cd ~/ai-launchkit
-  python3 -m http.server 8888
-  
-  # On local computer:
-  wget http://your-server-ip:8888/ai-launchkit-credentials.json
-  # Then immediately stop the Python server (Ctrl+C)
-
-Option 3: Using cat and copy-paste (for small files):
-  # On VPS:
-  cat ~/ai-launchkit/ai-launchkit-credentials.json
-  # Copy the output and save to a local file
-
-Option 4: Using secure file transfer with nc (netcat):
-  # On local computer (receiving):
-  nc -l 9999 > ai-launchkit-credentials.json
-  
-  # On VPS (sending):
-  nc your-local-ip 9999 < ~/ai-launchkit/ai-launchkit-credentials.json
-
 HOW TO IMPORT INTO VAULTWARDEN:
 --------------------------------
 
-1. Open Vaultwarden: https://your-vault-domain
-2. Login to your account
-3. Go to: Tools → Import Data
-4. Select Format: "Bitwarden (json)"
-5. Choose File: ai-launchkit-credentials.json
-6. Click: Import Data
+1. Download the file (see download options below)
+2. Open Vaultwarden: https://your-vault-domain
+3. Login to your account
+4. Go to: Tools → Import Data
+5. Select Format: "Bitwarden (json)"
+6. Choose File: ai-launchkit-credentials.json
+7. Click: Import Data
 
 All credentials will be imported into the "AI LaunchKit Services" folder.
 
 SECURITY NOTES:
 ---------------
-⚠️  DELETE the JSON file from both VPS and local computer after import!
+⚠️  DELETE the JSON file after import!
 ⚠️  This file contains ALL your passwords in plain text!
-
-To delete:
-  # On VPS:
-  rm ~/ai-launchkit/ai-launchkit-credentials.json
-  
-  # On local computer:
-  rm ./ai-launchkit-credentials.json
 EOF
 
     log_success "✅ Vaultwarden import file generated: $json_file"
     echo
     log_info "📋 Import Instructions saved to: VAULTWARDEN_IMPORT.txt"
     echo
-    echo "🚀 EASY DOWNLOAD:"
-    echo "    Run this command for automatic secure download:"
-    echo
-    echo "    bash ~/ai-launchkit/scripts/download_credentials.sh"
-    echo
-    echo "    This will:"
-    echo "    • Open a temporary web server (60 seconds)"
-    echo "    • Show you a download link"
-    echo "    • Automatically delete the file after download"
-    echo
-    echo "📝 MANUAL DOWNLOAD (if needed):"
-    echo "    scp $(whoami)@${USER_DOMAIN_NAME}:~/ai-launchkit/ai-launchkit-credentials.json ./"
-    echo
-    echo "⚠️  SECURITY: The JSON file contains ALL passwords in plain text!"
-    echo "    The download script automatically deletes it after 60 seconds."
-    echo
+    
+    # ============================================================================
+    # Download Option
+    # ============================================================================
+    
+    OFFER_DOWNLOAD=false
+    
+    # Auto-download if flag was provided
+    if [ "$AUTO_DOWNLOAD" = true ]; then
+        OFFER_DOWNLOAD=true
+    else
+        # Ask user if they want to download
+        echo
+        read -p "📥 Do you want to download the Vaultwarden JSON file? (y/N): " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            OFFER_DOWNLOAD=true
+        fi
+    fi
+    
+    # ============================================================================
+    # Provide Download Link
+    # ============================================================================
+    
+    if [ "$OFFER_DOWNLOAD" = true ]; then
+        echo
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "📥 DOWNLOAD VAULTWARDEN JSON"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo
+        
+        # Port for temporary HTTP server
+        DOWNLOAD_PORT=8889
+        DOWNLOAD_FILENAME="ai-launchkit-credentials.json"
+        
+        # Get server IPv4 address
+        echo "🔍 Detecting server IP address..."
+        IP=$(curl -4 -s ifconfig.me 2>/dev/null || echo "YOUR_SERVER_IP")
+        
+        # Open firewall port temporarily
+        echo "🔓 Opening firewall port $DOWNLOAD_PORT..."
+        sudo ufw allow $DOWNLOAD_PORT/tcp >/dev/null 2>&1 || true
+        
+        echo
+        echo "👇 Open this link in your browser:"
+        echo
+        echo "   http://$IP:$DOWNLOAD_PORT/$DOWNLOAD_FILENAME"
+        echo
+        echo "⏱️  Link expires in 60 seconds!"
+        echo
+        echo "💡 Tip: Right-click → 'Save Link As' to download"
+        echo
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo
+        echo "🌐 Starting temporary download server..."
+        echo "   (Server will auto-stop after 60 seconds)"
+        echo
+        
+        cd "$PROJECT_ROOT"
+        timeout 60 python3 -m http.server $DOWNLOAD_PORT >/dev/null 2>&1 || true
+        
+        echo
+        echo "🧹 Cleaning up..."
+        
+        # Close firewall port
+        sudo ufw delete allow $DOWNLOAD_PORT/tcp >/dev/null 2>&1 || true
+        
+        # Delete the credentials file after download
+        rm -f "$json_file"
+        
+        echo
+        echo "✅ Download link expired."
+        echo "🗑️  Vaultwarden JSON file deleted for security."
+        echo
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    else
+        echo
+        echo "💾 Vaultwarden JSON file saved. Remember to delete it after import:"
+        echo "   rm $json_file"
+        echo
+        echo "Or use the download script:"
+        echo "   bash ./scripts/download_credentials.sh"
+    fi
     
     return 0
 }

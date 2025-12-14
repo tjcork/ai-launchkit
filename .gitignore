@@ -35,6 +35,20 @@ jitsi-web/
 jitsi-transcripts/
 VAULTWARDEN_IMPORT.txt
 ai-launchkit-credentials.json
+chatterbox-frontend/
+chatterbox-frontend/
+chatterbox-frontend/
+website/
+vexa/
+volumes/
+opennotebook/
+credentials.*.txt
+dex/config.yaml
+homepage_config/logs/
+homepage_config/services.yaml
+homepage_config/docker.yaml
+homepage_config/widgets.yaml
+.env.backup
 
 host-services/dns/Corefile
 host-services/dns/.env

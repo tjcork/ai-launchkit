@@ -51,6 +51,94 @@ if is_profile_active "n8n"; then
   echo "================================= n8n ================================="
   echo
   echo "Host: ${N8N_HOSTNAME:-<hostname_not_set>}"
+  echo
+  echo "================================= n8n Task Runner ================================="
+  log_success "Python Task Runner: ENABLED"
+  echo "  📦 Native Python execution in n8n Code nodes"
+  echo "  ⚡ Better performance than Pyodide (10-20x faster)"
+  echo "  📚 Supports: pandas, numpy, requests, scikit-learn (via custom image)"
+  echo "  ⚠️  Breaking Change: Use item[\"json\"] instead of item.json"
+  echo "  📖 Migration Guide: See README.md for syntax changes"
+fi
+
+if is_profile_active "webhook-testing"; then
+  echo
+  echo "================================= WEBHOOK TESTING SUITE ==============="
+  echo
+  echo "============ Webhook Tester (Incoming Webhook Debugger) =============="
+  echo "Host: ${WEBHOOK_TESTER_HOSTNAME:-<hostname_not_set>}"
+  echo "User: ${WEBHOOK_TESTER_USERNAME:-<not_set_in_env>}"
+  echo "Password: ${WEBHOOK_TESTER_PASSWORD:-<not_set_in_env>}"
+  echo "URL: https://${WEBHOOK_TESTER_HOSTNAME:-<hostname_not_set>}"
+  echo "Internal URL: http://webhook-tester:8080"
+  echo
+  echo "============ Hoppscotch (API Testing Platform) ======================"
+  echo "Host: ${HOPPSCOTCH_HOSTNAME:-<hostname_not_set>}"
+  echo "URL: https://${HOPPSCOTCH_HOSTNAME:-<hostname_not_set>}"
+  echo "Admin Dashboard: https://${HOPPSCOTCH_HOSTNAME:-<hostname_not_set>}/admin"
+  echo "Internal API: http://hoppscotch:3170"
+  echo
+  echo "⚠️  First-time setup:"
+  echo "  1. Visit https://${HOPPSCOTCH_HOSTNAME:-<hostname_not_set>}"
+  echo "  2. Create your account with email"
+  echo "  3. Check Mailpit for verification email"
+  echo "  4. Admin dashboard at /admin (first user = admin)"
+  echo
+  echo "Documentation: https://docs.hoppscotch.io"
+fi
+
+if is_profile_active "gitea"; then
+  echo
+  echo "================================= Gitea Git Server ===================="
+  echo
+  echo "Host: ${GITEA_HOSTNAME:-<hostname_not_set>}"
+  echo "SSH Port: ${GITEA_SSH_PORT:-2222}"
+  echo
+  echo "Access:"
+  echo "  Web UI: https://${GITEA_HOSTNAME:-<hostname_not_set>}"
+  echo "  SSH: ssh://git@${GITEA_HOSTNAME}:${GITEA_SSH_PORT}"
+  echo "  Internal: http://gitea:3000"
+  echo
+  echo "Initial Setup:"
+  echo "  1. Visit https://${GITEA_HOSTNAME}/install"
+  echo "  2. Database is pre-configured (PostgreSQL)"
+  echo "  3. Set Site Title and your domain"
+  echo "  4. Create admin account (first user = admin)"
+  echo
+  echo "SSH Clone Example:"
+  echo "  git clone ssh://git@${GITEA_HOSTNAME}:${GITEA_SSH_PORT}/username/repo.git"
+  echo
+  echo "n8n Integration:"
+  echo "  Webhooks: http://n8n:5678/webhook/gitea"
+  echo "  API: http://gitea:3000/api/v1"
+  echo
+  echo "Documentation: https://docs.gitea.com"
+fi
+
+if is_profile_active "homepage"; then
+  echo
+  echo "================================= Homepage Dashboard =================="
+  echo
+  echo "Host: ${HOMEPAGE_HOSTNAME:-<hostname_not_set>}"
+  echo
+  echo "Access:"
+  echo "  External (HTTPS): https://${HOMEPAGE_HOSTNAME:-<hostname_not_set>}"
+  echo "  Internal (Docker): http://homepage:3000"
+  echo
+  echo "⚠️  Note: Homepage has NO authentication by design!"
+  echo "  It's meant as a public dashboard for your services"
+  echo
+  echo "Configuration:"
+  echo "  Config Directory: ./homepage_config/"
+  echo "  Services: Edit homepage_config/services.yaml"
+  echo "  Bookmarks: Edit homepage_config/bookmarks.yaml"
+  echo "  Settings: Edit homepage_config/settings.yaml"
+  echo
+  echo "Docker Integration:"
+  echo "  Homepage can show container status"
+  echo "  Docker socket is mounted read-only"
+  echo
+  echo "Documentation: https://gethomepage.dev"
 fi
 
 if is_profile_active "open-webui"; then
@@ -145,6 +233,36 @@ if is_profile_active "monitoring"; then
   echo "Password: ${PROMETHEUS_PASSWORD:-<not_set_in_env>}"
 fi
 
+if is_profile_active "uptime-kuma"; then
+  echo
+  echo "================================= Uptime Kuma ========================="
+  echo
+  echo "Host: ${UPTIME_KUMA_HOSTNAME:-<hostname_not_set>}"
+  echo
+  echo "Access:"
+  echo "  External (HTTPS): https://${UPTIME_KUMA_HOSTNAME:-<hostname_not_set>}"
+  echo "  Internal (Docker): http://uptime-kuma:3001"
+  echo
+  echo "First Steps:"
+  echo "  1. Visit https://${UPTIME_KUMA_HOSTNAME:-<hostname_not_set>}"
+  echo "  2. Create your first admin account (first user = admin)"
+  echo "  3. Optional: Enable 2FA for extra security"
+  echo "  4. Create your first monitor"
+  echo "  5. Set up notification channels (Discord, Telegram, Email, etc.)"
+  echo
+  echo "Public Status Pages:"
+  echo "  Create public status pages for your customers"
+  echo "  Share uptime information transparently"
+  echo "  Configure in Settings → Status Pages"
+  echo
+  echo "n8n Integration:"
+  echo "  Use HTTP Request node with URL: http://uptime-kuma:3001"
+  echo "  Webhooks: Configure in monitor settings"
+  echo "  API: Generate API token in Settings → API Keys"
+  echo
+  echo "Documentation: https://github.com/louislam/uptime-kuma/wiki"
+fi
+
 if is_profile_active "searxng"; then
   echo
   echo "================================= Searxng ============================="
@@ -164,16 +282,122 @@ if is_profile_active "perplexica"; then
   echo
   echo "Access:"
   echo "  External (HTTPS): https://${PERPLEXICA_HOSTNAME:-<hostname_not_set>}"
-  echo "  Internal API: http://perplexica-backend:3001"
+  echo "  Internal API: http://perplexica:3000"
   echo
   echo "n8n Integration:"
-  echo "  API Endpoint: http://perplexica-backend:3001/api/search"
+  echo "  API Endpoint: http://perplexica:3000/api/search"
   echo "  Method: POST"
-  echo "  Body: {\"query\": \"your search\", \"mode\": \"all\"}"
+  echo "  Body: {\"query\": \"your search\", \"focusMode\": \"webSearch\", \"chatHistory\": []}"
   echo
   echo "Documentation: https://github.com/ItzCrazyKns/Perplexica"
   echo
-  echo "Note: First start takes ~5-10 minutes to build the containers"
+  echo "Note: Configure AI providers (OpenAI, Ollama, etc.) via Web UI after first login"
+fi
+
+if is_profile_active "research" || is_profile_active "gpt-researcher"; then
+  echo
+  echo "================================= GPT Researcher ======================="
+  echo
+  echo "Host: ${GPTR_HOSTNAME:-<hostname_not_set>}"
+  echo "User: ${GPTR_USERNAME:-<not_set_in_env>}"
+  echo "Password: ${GPTR_PASSWORD:-<not_set_in_env>}"
+  echo
+  echo "Access:"
+  echo "  External (HTTPS): https://${GPTR_HOSTNAME:-<hostname_not_set>}"
+  echo "  Internal Backend: http://gpt-researcher:8000"
+  echo "  Internal Frontend: http://gpt-researcher-ui:3000"
+  echo
+  echo "Configuration:"
+  echo "  Search: ${GPTR_RETRIEVER:-searx} (using SearXNG)"
+  echo "  LLM: ${GPTR_LLM_PROVIDER:-ollama}"
+  echo "  Report Length: ${GPTR_TOTAL_WORDS:-2000} words"
+  echo "  Format: ${GPTR_REPORT_FORMAT:-APA}"
+  echo
+  echo "n8n Integration:"
+  echo "  HTTP Request node: http://gpt-researcher:8000/api/research"
+  echo "  Method: POST"
+  echo "  Body: {\"query\": \"your research topic\", \"report_type\": \"research_report\"}"
+  echo
+  echo "Documentation: https://docs.gptr.dev"
+  echo "GitHub: https://github.com/assafelovic/gpt-researcher"
+fi
+
+if is_profile_active "research" || is_profile_active "local-deep-research"; then
+  echo
+  echo "======================= Local Deep Research API ========================"
+  echo
+  echo "Internal API Only - No Web Interface!"
+  echo "Access: http://local-deep-research:2024 (from n8n/containers only)"
+  echo
+  echo "n8n Integration:"
+  echo "  HTTP Request: http://local-deep-research:2024/assistants/search"
+  echo "  Method: POST"
+  echo "  Body: {\"query\": \"your research topic\"}"
+  echo
+  echo "LangGraph Studio (external):"
+  echo "  Use ngrok or port forwarding to expose port 2024"
+  echo
+  echo "Documentation: https://github.com/langchain-ai/local-deep-researcher"
+fi
+
+# Combined research tips (if both active)
+if (is_profile_active "research" || is_profile_active "gpt-researcher") && (is_profile_active "research" || is_profile_active "local-deep-research"); then
+  echo
+  echo "======================== Research Tools Integration ==================="
+  echo
+  echo "You have both research tools active! Use them for:"
+  echo
+  echo "• GPT Researcher: Quick comprehensive reports (2-5 minutes)"
+  echo "• Local Deep Research: Detailed iterative analysis (10-20 minutes)"
+  echo
+  echo "n8n Workflow Ideas:"
+  echo "  1. Use GPT Researcher for initial overview"
+  echo "  2. Feed results to Local Deep Research for deep dive"
+  echo "  3. Combine outputs for comprehensive analysis"
+  echo
+  echo "Both tools use your existing Ollama and SearXNG installations!"
+fi
+
+if is_profile_active "opennotebook"; then
+  echo
+  echo "======================= Open Notebook =============================="
+  echo
+  echo "🧠 AI-Powered Knowledge Management & Research Platform"
+  echo "Privacy-First Alternative to Google NotebookLM"
+  echo
+  echo "Host: ${OPENNOTEBOOK_HOSTNAME:-<hostname_not_set>}"
+  echo
+  echo "Access:"
+  echo "  External (HTTPS): https://${OPENNOTEBOOK_HOSTNAME:-<hostname_not_set>}"
+  echo "  Internal API: http://opennotebook:5055 (n8n workflows only)"
+  echo
+  echo "Authentication:"
+  echo "  Password: ${OPENNOTEBOOK_PASSWORD:-<not_set_in_env>}"
+  echo "  Note: Native Open Notebook password - enter on first visit"
+  echo
+  echo "n8n Integration (REST API):"
+  echo "  Base URL: http://opennotebook:5055"
+  echo "  API Docs: http://opennotebook:5055/docs (Swagger UI)"
+  echo "  No auth required for internal Docker network"
+  echo
+  echo "  Example endpoints:"
+  echo "    GET  /api/notebooks - List all notebooks"
+  echo "    POST /api/notebooks - Create notebook"
+  echo "    POST /api/sources - Upload research content"
+  echo "    POST /api/chat - Chat with AI about your content"
+  echo
+  echo "Data Storage:"
+  echo "  Notebooks: ./opennotebook/notebook_data"
+  echo "  Database: ./opennotebook/surreal_data (embedded SurrealDB)"
+  echo "  Shared: ./shared (for file exchange with other services)"
+  echo
+  echo "AI Configuration:"
+  echo "  Using shared API keys: OPENAI_API_KEY, ANTHROPIC_API_KEY, GROQ_API_KEY"
+  echo "  Configure models in Settings → Models (Web UI)"
+  echo "  Supports local models via Ollama: http://ollama:11434"
+  echo
+  echo "Documentation: https://www.open-notebook.ai"
+  echo "GitHub: https://github.com/lfnovo/open-notebook"
 fi
 
 if is_profile_active "portainer"; then
@@ -298,8 +522,25 @@ if is_profile_active "mautic"; then
   echo "Marketing Automation Platform"
   echo
   echo "Access URL: https://${MAUTIC_HOSTNAME:-<hostname_not_set>}"
-  echo "Admin Email: ${MAUTIC_ADMIN_EMAIL:-<not_set_in_env>}"
-  echo "Admin Password: ${MAUTIC_ADMIN_PASSWORD:-<not_set_in_env>}"
+  echo
+  echo "INSTALLATION WIZARD - Database Setup:"
+  echo "  Database Driver: MySQL PDO (Recommended)"
+  echo "  Database Host: mautic_db"
+  echo "  Database Port: 3306"
+  echo "  Database Name: mautic"
+  echo "  Database Username: mautic"
+  echo "  Database Password: ${MAUTIC_DB_PASSWORD:-<not_set_in_env>}"
+  echo
+  echo "Admin Account (after installation):"
+  echo "  Email: ${MAUTIC_ADMIN_EMAIL:-<not_set_in_env>}"
+  echo "  Password: ${MAUTIC_ADMIN_PASSWORD:-<not_set_in_env>}"
+  echo
+  echo "Email Configuration (for sending):"
+  echo "  Mailer: SMTP"
+  echo "  Server: mailpit (for testing)"
+  echo "  Port: 1025"
+  echo "  Encryption: None"
+  echo "  OR use external SMTP (Mailjet, SendGrid, etc.)"
   echo
   echo "API Access (for n8n):"
   echo "  Base URL: https://${MAUTIC_HOSTNAME:-<hostname_not_set>}/api"
@@ -313,11 +554,11 @@ if is_profile_active "mautic"; then
   echo "  3. Create OAuth2 credentials in Mautic"
   echo "  4. Configure webhook: http://n8n:5678/webhook/mautic"
   echo
-  echo "Initial Setup:"
-  echo "  1. Complete installation wizard at https://${MAUTIC_HOSTNAME:-<hostname_not_set>}"
-  echo "  2. Configure email settings (Mailpit pre-configured)"
-  echo "  3. Import contacts or create forms"
-  echo "  4. Build your first campaign"
+  echo "Quick Start:"
+  echo "  1. Open https://${MAUTIC_HOSTNAME:-<hostname_not_set>}"
+  echo "  2. Complete installation wizard with database info above"
+  echo "  3. Create your first contact in Contacts → New"
+  echo "  4. Build your first campaign in Campaigns → New"
   echo
   echo "Documentation: https://docs.mautic.org"
   echo "Community: https://forum.mautic.org"
@@ -374,6 +615,151 @@ if is_profile_active "nocodb"; then
   echo
   echo "Documentation: https://docs.nocodb.com"
   echo "Community: https://discord.gg/5RgZmkW"
+fi
+
+if is_profile_active "outline"; then
+  echo
+  echo "================================= Outline Wiki ========================"
+  echo
+  echo "Host: ${OUTLINE_HOSTNAME:-<hostname_not_set>}"
+  echo
+  echo "Access:"
+  echo "  Wiki URL: https://${OUTLINE_HOSTNAME:-<hostname_not_set>}"
+  echo "  Login URL: https://${OUTLINE_HOSTNAME:-<hostname_not_set>}/auth/login"
+  echo
+  echo "🔐 Authentication (Local Dex Identity Provider):"
+  echo "  Admin Email: ${DEX_ADMIN_EMAIL:-<not_set_in_env>}"
+  echo "  Admin Password: ${DEX_ADMIN_PASSWORD:-<not_set_in_env>}"
+  echo
+  echo "✅ Login Process:"
+  echo "  1. Visit https://${OUTLINE_HOSTNAME:-<hostname_not_set>}"
+  echo "  2. Click 'Continue with Login'"
+  echo "  3. Enter admin credentials above"
+  echo "  4. First login creates Outline workspace"
+  echo
+  echo "MinIO S3 Storage:"
+  echo "  Admin UI: https://${OUTLINE_S3_ADMIN_HOSTNAME:-<hostname_not_set>}"
+  echo "  Username: minio"
+  echo "  Password: ${OUTLINE_MINIO_ROOT_PASSWORD:-<not_set>}"
+  echo "  Note: Bucket 'outline' auto-created on first start"
+  echo
+  echo "n8n Integration:"
+  echo "  Webhooks: Configure in Outline settings"
+  echo "  API: Requires API token from user settings"
+  echo
+  echo "💡 Tips:"
+  echo "  - Fully self-hosted, no external dependencies!"
+  echo "  - GDPR/DSGVO compliant solution"
+  echo "  - Add more users: Create in Dex config"
+  echo
+  echo "Documentation: https://docs.getoutline.com"
+fi
+
+if is_profile_active "seafile"; then
+  echo
+  echo "================================= Seafile ============================"
+  echo
+  echo "Host: ${SEAFILE_HOSTNAME:-<hostname_not_set>}"
+  echo "Admin Email: ${SEAFILE_ADMIN_EMAIL}"
+  echo "Admin Password: ${SEAFILE_ADMIN_PASSWORD:-<not_set>}"
+  echo
+  echo "Access: https://${SEAFILE_HOSTNAME:-<hostname_not_set>}"
+  echo
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo
+  echo "n8n Integration:"
+  echo "  Install community node: n8n-nodes-seafile"
+  echo "  Internal URL: http://seafile:80"
+  echo "  API Docs: https://manual.seafile.com/develop/web_api_v2.1/"
+  echo
+  echo "Desktop/Mobile Apps:"
+  echo "  Download: https://www.seafile.com/en/download/"
+  echo
+  echo "Documentation: https://manual.seafile.com/"
+fi
+
+if is_profile_active "paperless"; then
+  echo
+  echo "========================== Paperless-ngx ============================"
+  echo
+  echo "Host: ${PAPERLESS_HOSTNAME:-<hostname_not_set>}"
+  echo "Admin User: ${PAPERLESS_ADMIN_EMAIL}"
+  echo "Admin Password: ${PAPERLESS_ADMIN_PASSWORD:-<not_set>}"
+  echo
+  echo "Access: https://${PAPERLESS_HOSTNAME:-<hostname_not_set>}"
+  echo
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo
+  echo "Integration:"
+  echo "  - Consume folder: ./shared (accessible from Seafile)"
+  echo "  - API URL: http://paperless:8000/api/"
+  echo "  - API Token: Generate in user settings"
+  echo
+  echo "Mobile Apps:"
+  echo "  - iOS: 'Paperless Mobile'"
+  echo "  - Android: 'Paperless Mobile'"
+  echo
+  echo "Documentation: https://docs.paperless-ngx.com/"
+  echo "Community: https://github.com/paperless-ngx/paperless-ngx/discussions"
+fi
+
+if is_profile_active "paperless-ai"; then
+  echo
+  echo "==================== Paperless AI Extensions ========================"
+  echo
+  echo "⚠️  CRITICAL SETUP REQUIRED - FOLLOW THESE STEPS CAREFULLY!"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo
+  echo "📝 STEP 1: Create API Token in Paperless-ngx (REQUIRED)"
+  echo "────────────────────────────────────────────────────────────────"
+  echo "  1. Open Paperless-ngx: https://${PAPERLESS_HOSTNAME}"
+  echo "  2. Login with: ${PAPERLESS_ADMIN_EMAIL} / ${PAPERLESS_ADMIN_PASSWORD}"
+  echo "  3. Go to Settings → Open Django Admin Panel"
+  echo "  4. Click on 'Auth tokens' → 'Add'"
+  echo "  5. Select your user and save"
+  echo "  6. Click the pencil icon to edit the token"
+  echo "  7. In the popup under 'Permissions' click 'Choose all permissions'"
+  echo "  8. Save and copy the token"
+  echo
+  echo "📝 STEP 2: Configure paperless-gpt"
+  echo "────────────────────────────────────────────────────────────────"
+  echo "  1. Add token to .env:"
+  echo "     nano .env"
+  echo "     Find: PAPERLESS_API_TOKEN="
+  echo "     Paste your token after ="
+  echo
+  echo "  2. Restart paperless-gpt:"
+  echo "     docker compose -p localai restart paperless-gpt"
+  echo
+  echo "  3. Access: https://${PAPERLESS_GPT_HOSTNAME}"
+  echo "     Login: ${PAPERLESS_GPT_USERNAME} / ${PAPERLESS_GPT_PASSWORD}"
+  echo
+  echo "  ⚠️  KNOWN BUG: Documents need at least ONE tag for updates to work!"
+  echo "     Workaround: Add a tag like 'inbox' to all documents"
+  echo
+  echo "📝 STEP 3: Configure paperless-ai"
+  echo "────────────────────────────────────────────────────────────────"
+  echo "  1. Access: https://${PAPERLESS_AI_HOSTNAME}"
+  echo "  2. On first visit: Create your own username/password"
+  echo "  3. Enter configuration:"
+  echo "     - Paperless URL: http://paperless-ngx:8000"
+  echo "     - API Token: (paste the token from Step 1)"
+  echo "     - Ollama URL: http://ollama:11434"
+  echo
+  echo "📝 STEP 4: Fix RAG Chat (REQUIRED for paperless-ai)"
+  echo "────────────────────────────────────────────────────────────────"
+  echo "  Run this command to fix RAG indexing:"
+  echo
+  echo "  docker exec paperless-ai sh -c \"echo 'PAPERLESS_URL=http://paperless-ngx:8000' >> /app/data/.env\""
+  echo "  docker compose -p localai restart paperless-ai"
+  echo
+  echo "  This fixes a bug where paperless-ai uses inconsistent ENV variables"
+  echo
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "✅ After completing these steps:"
+  echo "  - paperless-gpt: Superior OCR at /manual and /ocr tabs"
+  echo "  - paperless-ai: RAG chat and semantic search working"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 fi
 
 if is_profile_active "formbricks"; then
@@ -458,6 +844,45 @@ if is_profile_active "metabase"; then
   echo
   echo "Documentation: https://www.metabase.com/docs"
   echo "Learn: https://www.metabase.com/learn"
+fi
+
+if is_profile_active "airbyte"; then
+  echo
+  echo "================================= Airbyte =============================="
+  echo
+  echo "Web UI Access:"
+  echo "  URL:      https://${AIRBYTE_HOSTNAME}"
+  echo
+  echo "First Login:"
+  echo "  - Enter your email address (will be your username)"
+  echo "  - Password: ${AIRBYTE_PASSWORD}"
+  echo
+  echo "Destination Database (for synced data):"
+  echo "  Host:     airbyte_destination_db (or ${SERVER_IP} for external access)"
+  echo "  Port:     5433"
+  echo "  Database: marketing_data"
+  echo "  User:     airbyte"
+  echo "  Password: ${AIRBYTE_DESTINATION_DB_PASSWORD}"
+  echo
+  echo "Setup Steps:"
+  echo "  1. Log into Airbyte UI at URL above"
+  echo "  2. First login: Enter your email + password (above)"
+  echo "  3. Add your data sources (Google Ads, Meta, TikTok, etc.)"
+  echo "  4. Create destination: PostgreSQL"
+  echo "     - Host: airbyte_destination_db (or ${SERVER_IP})"
+  echo "     - Port: 5433"
+  echo "     - Database: marketing_data"
+  echo "     - Username: airbyte"
+  echo "     - Password: ${AIRBYTE_DESTINATION_DB_PASSWORD}"
+  echo "  5. Create connections (source → destination)"
+  echo
+  echo "Metabase Integration:"
+  echo "  Connect Metabase to the destination database above"
+  echo "  to create dashboards on your synced marketing data."
+  echo
+  echo "n8n Integration:"
+  echo "  Trigger syncs via: http://localhost:8001/api/v1/"
+  echo
 fi
 
 if is_profile_active "vikunja"; then
@@ -692,6 +1117,69 @@ if is_profile_active "jitsi"; then
   echo "Documentation: https://jitsi.github.io/handbook/"
 fi
 
+if is_profile_active "livekit"; then
+  echo
+  echo "================================= LiveKit ============================="
+  echo
+  echo "Real-time Voice & Video Infrastructure (WebRTC SFU Server)"
+  echo
+  echo "WebSocket URL: wss://${LIVEKIT_HOSTNAME:-<hostname_not_set>}"
+  echo
+  echo "API Credentials (for client authentication):"
+  echo "  API Key: ${LIVEKIT_API_KEY:-<not_set_in_env>}"
+  echo "  API Secret: ${LIVEKIT_API_SECRET:-<not_set_in_env>}"
+  echo
+  echo "Access:"
+  echo "  External WebSocket: wss://${LIVEKIT_HOSTNAME:-<hostname_not_set>}"
+  echo "  Internal WebSocket: ws://livekit-server:7880"
+  echo "  Internal HTTP API: http://livekit-server:7881"
+  echo
+  echo "⚠️  CRITICAL NETWORK REQUIREMENTS:"
+  echo "  - UDP Ports 50000-50100 MUST be open for WebRTC media"
+  echo "  - TCP Port 7882 required for fallback"
+  echo "  - Without UDP: Audio/Video will NOT work!"
+  echo
+  echo "Network Configuration:"
+  echo "  Media Ports: 50000-50100/udp + 7882/tcp"
+  echo "  Node IP: ${JVB_DOCKER_HOST_ADDRESS:-<auto-detected>}"
+  echo
+  echo "Authentication:"
+  echo "  ✓ JWT-based client authentication (no login UI)"
+  echo "  ✓ Generate tokens using API Key/Secret"
+  echo "  ✓ Tokens must be generated by your backend/n8n"
+  echo
+  echo "n8n Integration:"
+  echo "  1. Install LiveKit SDK: npm install livekit-server-sdk"
+  echo "  2. Generate access tokens using API Key/Secret"
+  echo "  3. Pass tokens to frontend/client applications"
+  echo "  4. Use internal URL: ws://livekit-server:7880"
+  echo
+  echo "Client SDKs Available:"
+  echo "  - JavaScript/TypeScript (Web/React/Vue)"
+  echo "  - React Native (iOS/Android)"
+  echo "  - Flutter (iOS/Android)"
+  echo "  - Swift (iOS/macOS)"
+  echo "  - Kotlin/Java (Android)"
+  echo
+  echo "================================= LiveKit Agents ======================"
+  echo
+  echo "Voice Agent Status: Running"
+  echo "Mode: $(if [[ -n "${OPENAI_API_KEY}" ]]; then echo "OpenAI (Cloud)"; else echo "Local (Ollama/Whisper/TTS)"; fi)"
+  echo
+  echo "How to use:"
+  echo "  1. Create LiveKit room via n8n or API"
+  echo "  2. Generate JWT token with API Key/Secret"
+  echo "  3. Connect client with token"
+  echo "  4. Agent joins automatically and responds to voice"
+  echo
+  echo "Test Interface: Create file website/voice-test.html"
+  echo "n8n JWT Generation: Use JavaScript node with jsonwebtoken"
+  echo
+  echo "Agent Logs: docker logs livekit-agents -f"
+  echo "Documentation: https://docs.livekit.io/"
+  echo "SDK Examples: https://github.com/livekit/livekit-examples"
+fi
+
 if is_profile_active "vaultwarden"; then
   echo
   echo "================================= Vaultwarden ========================="
@@ -737,6 +1225,54 @@ if is_profile_active "vaultwarden"; then
   echo "  Port: ${SMTP_PORT:-1025}"
   echo
   echo "Documentation: https://github.com/dani-garcia/vaultwarden"
+fi
+
+if is_profile_active "ai-security"; then
+  echo
+  echo "================================= AI Security Suite ==================="
+  echo
+  echo "🛡️  LLM Guard (Prompt Injection Protection)"
+  echo "  Internal API: http://llm-guard:8000"
+  echo "  API Token: ${LLM_GUARD_TOKEN:-<not_set_in_env>}"
+  echo
+  echo "🔐  Microsoft Presidio (GDPR-Compliant PII Handling - English)"
+  echo "  Analyzer API: http://presidio-analyzer:3000"
+  echo "  Anonymizer API: http://presidio-anonymizer:3000"
+  echo "  Min Score: ${PRESIDIO_MIN_SCORE:-0.5}"
+  echo
+  echo "🌍  Flair NER (German/Multi-language PII Detection)"
+  echo "  Internal API: http://flair-pii:8000"
+  echo "  Models: de-ner-large (German), ner-large (English)"
+  echo "  Accuracy: 95%+ for German names/locations"
+  echo
+  echo "📚  n8n Integration Examples:"
+  echo
+  echo "  LLM Guard - Pre-processing check:"
+  echo "    POST http://llm-guard:8000/analyze/prompt"
+  echo "    Headers: { \"Authorization\": \"Bearer \${LLM_GUARD_TOKEN}\" }"
+  echo "    Body: { \"prompt\": \"user input text\" }"
+  echo
+  echo "  Presidio - PII Detection (English):"
+  echo "    POST http://presidio-analyzer:3000/analyze"
+  echo "    Body: { \"text\": \"...\", \"language\": \"en\" }"
+  echo
+  echo "  Flair - PII Detection (German/Multi-language):"
+  echo "    POST http://flair-pii:8000/analyze"
+  echo "    Body: { \"text\": \"...\", \"language\": \"de\" }"
+  echo
+  echo "  Presidio/Flair - Anonymization:"
+  echo "    Presidio: POST http://presidio-anonymizer:3000/anonymize"
+  echo "    Flair: POST http://flair-pii:8000/anonymize"
+  echo
+  echo "💡 Workflow Patterns:"
+  echo "  English: User Input → LLM Guard → Presidio → LLM → Output"
+  echo "  German: User Input → LLM Guard → Flair → LLM → Output"
+  echo "  Hybrid: Use Flair for NER + Presidio for patterns"
+  echo
+  echo "Documentation:"
+  echo "  LLM Guard: https://llm-guard.com/docs"
+  echo "  Presidio: https://microsoft.github.io/presidio"
+  echo "  Flair: https://github.com/flairNLP/flair"
 fi
 
 if is_profile_active "kopia"; then
@@ -819,6 +1355,92 @@ if is_profile_active "speech"; then
   echo
   echo "Note: External access requires Basic Auth. Internal access from n8n is auth-free."
   echo "Note: Services are CPU-optimized for VPS"
+fi
+
+# TTS Chatterbox Report
+if is_profile_active "tts-chatterbox"; then
+  echo
+  echo "================================= TTS Chatterbox ======================"
+  echo
+  echo "🎙️ State-of-the-Art Text-to-Speech with Emotion Control"
+  echo
+  echo "Host: ${CHATTERBOX_HOSTNAME:-<hostname_not_set>}"
+  echo "API Key: ${CHATTERBOX_API_KEY:-<not_set_in_env>}"
+  echo "Device: ${CHATTERBOX_DEVICE:-cpu}"
+  echo "Emotion Level: ${CHATTERBOX_EXAGGERATION:-0.5} (0.25-2.0)"
+  echo
+  echo "Access:"
+  echo "  External (HTTPS): https://${CHATTERBOX_HOSTNAME:-<hostname_not_set>}"
+  echo "  Internal (Docker): http://chatterbox-tts:4123"
+  echo
+  echo "Web UI Access:"  
+  echo "  Frontend: https://${CHATTERBOX_FRONTEND_HOSTNAME:-<hostname_not_set>}"
+  echo
+  echo "API Endpoints:"
+  echo "  OpenAI Compatible: POST /v1/audio/speech"
+  echo "  Health Check: GET /health"
+  echo "  Voices List: GET /v1/voices"
+  echo "  Voice Clone: POST /v1/voice/clone"
+  echo
+  echo "n8n Integration:"
+  echo "  Use HTTP Request node with URL: http://chatterbox-tts:4123/v1/audio/speech"
+  echo "  Add header: X-API-Key: \${CHATTERBOX_API_KEY}"
+  echo
+  echo "Voice Cloning:"
+  echo "  1. Place 10-30 second audio samples in: ./shared/tts/voices/"
+  echo "  2. Supported formats: wav, mp3, ogg, flac"
+  echo "  3. Use voice ID in API calls"
+  echo
+  echo "Performance:"
+  echo "  CPU Mode: ~5-10 seconds per sentence"
+  echo "  GPU Mode: <1 second per sentence (set CHATTERBOX_DEVICE=cuda)"
+  echo
+  echo "Documentation: https://github.com/travisvn/chatterbox-tts-api"
+  echo "Model Info: https://www.resemble.ai/chatterbox/"
+fi
+
+# Vexa Meeting Transcription Report
+if is_profile_active "vexa"; then
+  echo
+  echo "================================= Vexa (Meeting Transcription) ========"
+  echo
+  echo "🎙️ Real-time Meeting Transcription API (Google Meet & Teams)"
+  echo
+  echo "Platform Support:"
+  echo "  ✅ Google Meet (Live)"
+  echo "  ✅ Microsoft Teams (Live)"
+  echo "  ⏳ Zoom (Coming Soon)"
+  echo
+  echo "Access (via exposed ports):"
+  echo "  API Gateway: http://localhost:8056 or http://YOUR_SERVER_IP:8056"
+  echo "  Admin API: http://localhost:8057 or http://YOUR_SERVER_IP:8057"
+  echo
+  echo "Authentication:"
+  echo "  User API Key: ${VEXA_API_KEY:-<not_set_in_env>}"
+  echo "  Admin Token: ${VEXA_ADMIN_TOKEN:-<not_set_in_env>}"
+  echo
+  echo "n8n Integration Example (Google Meet):"
+  echo "  Method: POST"
+  echo "  URL: http://localhost:8056/bots"
+  echo "  Headers: { \"X-API-Key\": \"${VEXA_API_KEY}\" }"
+  echo "  Body: {"
+  echo "    \"platform\": \"google_meet\","
+  echo "    \"native_meeting_id\": \"xxx-xxxx-xxx\""
+  echo "  }"
+  echo
+  echo "Get Transcript:"
+  echo "  Method: GET"
+  echo "  URL: http://localhost:8056/transcripts/google_meet/xxx-xxxx-xxx"
+  echo "  Headers: { \"X-API-Key\": \"${VEXA_API_KEY}\" }"
+  echo
+  echo "Whisper Configuration:"
+  echo "  Model: ${VEXA_WHISPER_MODEL:-base}"
+  echo "  Device: ${VEXA_WHISPER_DEVICE:-cpu}"
+  echo "  Models: tiny (fastest) → base → medium → large (best quality)"
+  echo
+  echo "⚠️  Note: Vexa runs in separate network. Access via exposed ports only!"
+  echo
+  echo "Documentation: https://github.com/Vexa-ai/vexa"
 fi
 
 if is_profile_active "scriberr"; then
@@ -912,6 +1534,29 @@ if is_profile_active "stirling-pdf"; then
   echo "GitHub: https://github.com/Stirling-Tools/Stirling-PDF"
 fi
 
+if is_profile_active "docuseal"; then
+  echo
+  echo "================================= DocuSeal E-Signatures =============="
+  echo
+  echo "Host: ${DOCUSEAL_HOSTNAME:-<hostname_not_set>}"
+  echo
+  echo "Access:"
+  echo "  External (HTTPS): https://${DOCUSEAL_HOSTNAME:-<hostname_not_set>}"
+  echo "  Internal (Docker): http://docuseal:3000"
+  echo
+  echo "Initial Setup:"
+  echo "  1. Visit https://${DOCUSEAL_HOSTNAME:-<hostname_not_set>}"
+  echo "  2. Complete setup wizard"
+  echo "  3. Create admin account"
+  echo "  4. Configure SMTP for notifications (optional)"
+  echo
+  echo "n8n Integration:"
+  echo "  API Base: http://docuseal:3000/api"
+  echo "  Webhooks: Configure in DocuSeal settings"
+  echo
+  echo "Documentation: https://docs.docuseal.co"
+fi
+
 if is_profile_active "libretranslate"; then
   echo
   echo "================================= LibreTranslate ==========================="
@@ -933,6 +1578,45 @@ if is_profile_active "libretranslate"; then
   echo "  Body: {\"q\":\"Hello\",\"source\":\"en\",\"target\":\"de\"}"
   echo ""
   echo "Docs: https://github.com/LibreTranslate/LibreTranslate"
+fi
+
+if is_profile_active "browser-suite"; then
+  echo
+  echo "==================== Browser Automation Suite ========================"
+  echo
+  echo "🌐 Browserless (Chrome Runtime):"
+  echo "  Internal WebSocket: ws://browserless:3000?token=${BROWSERLESS_TOKEN:-<not_set>}"
+  echo "  Concurrent Sessions: ${BROWSERLESS_CONCURRENT:-10}"
+  echo "  Timeout: ${BROWSERLESS_TIMEOUT:-120000}ms"
+  echo
+  echo "🤖 Skyvern (Vision AI):"
+  echo "  Internal API: http://skyvern:8000"
+  echo "  API Key: ${SKYVERN_API_KEY:-<not_set>}"
+  if [ "${ENABLE_OLLAMA}" = "true" ]; then
+    echo "  Mode: LOCAL (Ollama)"
+    echo "  Model: ${OLLAMA_MODEL:-qwen2.5:7b-instruct}"
+  else
+    echo "  Mode: CLOUD (OpenAI)"
+    echo "  API Key: ${OPENAI_API_KEY:-<not_set>}"
+  fi
+  echo
+  echo "🧠 Browser-use (LLM Control):"
+  echo "  Execute: docker exec browser-use python -c 'your_code'"
+  echo "  Script location: ./shared/*.py"
+  echo
+  echo "📦 n8n Community Nodes to install:"
+  echo "  - n8n-nodes-puppeteer (WebSocket: ws://browserless:3000)"
+  echo "  - n8n-nodes-browserless"
+  echo
+  echo "Example n8n usage:"
+  echo "  1. Install community nodes in n8n UI"
+  echo "  2. Use Puppeteer node with browserless WebSocket"
+  echo "  3. For Skyvern: HTTP Request to http://skyvern:8000/v1/execute"
+  echo
+  echo "Documentation:"
+  echo "  Browserless: https://docs.browserless.io"
+  echo "  Skyvern: https://docs.skyvern.com"
+  echo "  Browser-use: https://github.com/browser-use/browser-use"
 fi
 
 if is_profile_active "qdrant"; then

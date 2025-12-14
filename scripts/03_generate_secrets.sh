@@ -101,6 +101,41 @@ declare -A VARS_TO_GENERATE=(
     ["FORMBRICKS_DB_PASSWORD"]="password:32"
     ["METABASE_ENCRYPTION_KEY"]="apikey:32"
     ["METABASE_DB_PASSWORD"]="password:32"
+    ["CHATTERBOX_API_KEY"]="apikey:32"
+    ["LLM_GUARD_TOKEN"]="apikey:32"
+    ["LIVEKIT_API_KEY"]="apikey:32"
+    ["LIVEKIT_API_SECRET"]="apikey:32"
+    ["VEXA_API_KEY"]="apikey:32"
+    ["VEXA_ADMIN_TOKEN"]="apikey:32"
+    ["BROWSERLESS_TOKEN"]="apikey:32"
+    ["SKYVERN_API_KEY"]="apikey:32"
+    ["N8N_MCP_TOKEN"]="apikey:32"
+    ["N8N_API_KEY"]="apikey:32"
+    ["GPTR_PASSWORD"]="password:32"
+    ["SEAFILE_DB_ROOT_PASSWORD"]="password:32"
+    ["SEAFILE_DB_PASSWORD"]="password:32"
+    ["SEAFILE_ADMIN_PASSWORD"]="password:16"
+    ["PAPERLESS_DB_PASSWORD"]="password:32"
+    ["PAPERLESS_SECRET_KEY"]="password:64"
+    ["PAPERLESS_ADMIN_PASSWORD"]="password:16"
+    ["PAPERLESS_GPT_PASSWORD"]="password:32"
+    ["LDR_PASSWORD"]="password:32"
+    ["OPENNOTEBOOK_PASSWORD"]="password:32"
+    ["N8N_RUNNERS_AUTH_TOKEN"]="secret:64"
+    ["WEBHOOK_TESTER_PASSWORD"]="password:32"
+    ["HOPPSCOTCH_DB_PASSWORD"]="password:32"
+    ["HOPPSCOTCH_JWT_SECRET"]="secret:64"
+    ["HOPPSCOTCH_SESSION_SECRET"]="secret:64"
+    ["HOPPSCOTCH_REFRESH_TOKEN_SECRET"]="secret:64"
+    ["HOPPSCOTCH_DATA_ENCRYPTION_KEY"]="alphanum:32"
+    ["AIRBYTE_PASSWORD"]="password:32"
+    ["AIRBYTE_DESTINATION_DB_PASSWORD"]="password:32"
+    ["OUTLINE_SECRET_KEY"]="hex:32"
+    ["OUTLINE_UTILS_SECRET"]="hex:32"
+    ["OUTLINE_MINIO_ROOT_PASSWORD"]="password:32"
+    ["OUTLINE_OIDC_CLIENT_SECRET"]="apikey:32"
+    ["DEX_ADMIN_PASSWORD"]="password:20"
+    ["DOCUSEAL_DB_PASSWORD"]="password:32"
     ["MAILPIT_PASSWORD"]="password:32"
     ["SMTP_PASS"]="password:16"
     ["MAIL_NOREPLY_PASSWORD"]="password:32"
@@ -425,6 +460,12 @@ gen_base64() {
     openssl rand -base64 "$bytes" | head -c "$length" # Truncate just in case
 }
 
+# Generate hex string (for Outline - needs 32 bytes = 64 hex chars)
+gen_hex() {
+    local bytes=$1
+    openssl rand -hex "$bytes"
+}
+
 # Function to update or add a variable to the .env file
 # Usage: _update_or_add_env_var "VAR_NAME" "var_value"
 _update_or_add_env_var() {
@@ -617,6 +658,12 @@ generated_values["BASEROW_USERNAME"]="$USER_EMAIL" # Set Baserow username for Ca
 generated_values["KOPIA_UI_USERNAME"]="admin"  # Kopia uses 'admin' by default
 generated_values["KIMAI_ADMIN_EMAIL"]="$USER_EMAIL"
 generated_values["INVOICENINJA_ADMIN_EMAIL"]="$USER_EMAIL"
+generated_values["GPTR_USERNAME"]="$USER_EMAIL"
+generated_values["SEAFILE_ADMIN_EMAIL"]="$USER_EMAIL"
+generated_values["PAPERLESS_ADMIN_EMAIL"]="$USER_EMAIL"
+generated_values["PAPERLESS_GPT_USERNAME"]="$USER_EMAIL"
+generated_values["WEBHOOK_TESTER_USERNAME"]="$USER_EMAIL"
+generated_values["AIRBYTE_USERNAME"]="admin"  # Airbyte uses fixed admin username
 generated_values["MAILPIT_USERNAME"]="$USER_EMAIL"  # Set Mailpit username for Caddy
 
 if [[ -n "$OPENAI_API_KEY" ]]; then
@@ -684,11 +731,35 @@ if [[ -n "$BASE_DOMAIN" ]]; then
     # Mailpit hostname (if not already set)
     if [[ -z "${generated_values[MAILPIT_HOSTNAME]}" ]]; then
         generated_values["MAILPIT_HOSTNAME"]="mail.${BASE_DOMAIN}"
+    fi    
+    # Chatterbox TTS hostnames (if not already set)
+    if [[ -z "${generated_values[CHATTERBOX_HOSTNAME]}" ]]; then
+        generated_values["CHATTERBOX_HOSTNAME"]="chatterbox.${BASE_DOMAIN}"
+    fi
+    if [[ -z "${generated_values[CHATTERBOX_FRONTEND_HOSTNAME]}" ]]; then
+        generated_values["CHATTERBOX_FRONTEND_HOSTNAME"]="voice.${BASE_DOMAIN}"
     fi
     if [[ -z "${generated_values[MAIL_INGEST_HOSTNAME]}" ]]; then
         generated_values["MAIL_INGEST_HOSTNAME"]="mail-ingest.${BASE_DOMAIN}"
     fi
 fi
+
+# Create website directory and default landing page
+if [ ! -d "./website" ]; then
+    log_info "Creating website directory for landing page..."
+    mkdir -p ./website
+fi
+
+if [ ! -f "./website/index.html" ]; then
+    log_info "Creating default landing page..."
+    if [ -f "./templates/landing-page.html" ]; then
+        cp ./templates/landing-page.html ./website/index.html
+        log_success "Landing page installed at main domain"
+    else
+        log_warning "Landing page template not found in ./templates/"
+    fi
+fi
+
 # Default Mailgun SMTP relay host/port if not provided
 if [[ -z "${generated_values[MAILGUN_SMTP_HOST]}" ]]; then
     generated_values["MAILGUN_SMTP_HOST"]="smtp.mailgun.org"
@@ -731,6 +802,13 @@ found_vars["BASEROW_USERNAME"]=0
 found_vars["KOPIA_UI_USERNAME"]=0
 found_vars["KIMAI_ADMIN_EMAIL"]=0
 found_vars["INVOICENINJA_ADMIN_EMAIL"]=0
+found_vars["GPTR_USERNAME"]=0
+found_vars["WEBHOOK_TESTER_USERNAME"]=0
+found_vars["PAPERLESS_GPT_USERNAME"]=0
+found_vars["PAPERLESS_AI_HOSTNAME"]=0
+found_vars["OUTLINE_MINIO_ROOT_USER"]=0
+found_vars["DEX_ADMIN_EMAIL"]=0
+found_vars["DEX_ADMIN_PASSWORD_HASH"]=0
 found_vars["MAILPIT_USERNAME"]=0
 found_vars["MAIL_INGEST_HOSTNAME"]=0
 found_vars["MAILGUN_WEBHOOK_SIGNING_KEY"]=0
@@ -803,7 +881,7 @@ while IFS= read -r line || [[ -n "$line" ]]; do
             # This 'else' block is for lines from template not covered by existing values or VARS_TO_GENERATE.
             # Check if it is one of the user input vars - these are handled by found_vars later if not in template.
             is_user_input_var=0 # Reset for each line
-            user_input_vars=("FLOWISE_USERNAME" "DASHBOARD_USERNAME" "LETSENCRYPT_EMAIL" "RUN_N8N_IMPORT" "PROMETHEUS_USERNAME" "SEARXNG_USERNAME" "OPENAI_API_KEY" "LANGFUSE_INIT_USER_EMAIL" "N8N_WORKER_COUNT" "WEAVIATE_USERNAME" "NEO4J_AUTH_USERNAME" "COMFYUI_USERNAME" "RAGAPP_USERNAME" "LIBRETRANSLATE_USERNAME" "WHISPER_AUTH_USER" "TTS_AUTH_USER" "ODOO_USERNAME" "BASEROW_USERNAME" "KOPIA_UI_USERNAME" "MAILPIT_USERNAME" "MAIL_INGEST_HOSTNAME" "MAILGUN_WEBHOOK_SIGNING_KEY" "MAILGUN_SMTP_HOST" "MAILGUN_SMTP_PORT" "MAILGUN_SMTP_USER" "MAILGUN_SMTP_PASSWORD" "PRIVATE_DNS_TARGET_IP" "PRIVATE_DNS_HOSTS" "PRIVATE_DNS_FORWARD_1" "PRIVATE_DNS_FORWARD_2" "MAUTIC_ADMIN_EMAIL" "MAUTIC_DB_USER" "INVOICENINJA_ADMIN_EMAIL" "EMAIL_FROM" "EMAIL_SMTP" "EMAIL_SMTP_HOST" "EMAIL_SMTP_PORT" "EMAIL_SMTP_USER" "EMAIL_SMTP_PASSWORD" "EMAIL_SMTP_USE_TLS" "DOMAIN")
+            user_input_vars=("FLOWISE_USERNAME" "DASHBOARD_USERNAME" "LETSENCRYPT_EMAIL" "RUN_N8N_IMPORT" "PROMETHEUS_USERNAME" "SEARXNG_USERNAME" "OPENAI_API_KEY" "LANGFUSE_INIT_USER_EMAIL" "N8N_WORKER_COUNT" "WEAVIATE_USERNAME" "NEO4J_AUTH_USERNAME" "COMFYUI_USERNAME" "WEBHOOK_TESTER_USERNAME" "RAGAPP_USERNAME" "LIBRETRANSLATE_USERNAME" "WHISPER_AUTH_USER" "TTS_AUTH_USER" "ODOO_USERNAME" "BASEROW_USERNAME" "KOPIA_UI_USERNAME" "GPTR_USERNAME" "MAILPIT_USERNAME" "MAIL_INGEST_HOSTNAME" "MAILGUN_WEBHOOK_SIGNING_KEY" "MAILGUN_SMTP_HOST" "MAILGUN_SMTP_PORT" "MAILGUN_SMTP_USER" "MAILGUN_SMTP_PASSWORD" "PRIVATE_DNS_TARGET_IP" "PRIVATE_DNS_HOSTS" "PRIVATE_DNS_FORWARD_1" "PRIVATE_DNS_FORWARD_2" "MAUTIC_ADMIN_EMAIL" "MAUTIC_DB_USER" "INVOICENINJA_ADMIN_EMAIL" "SEAFILE_ADMIN_EMAIL" "PAPERLESS_ADMIN_EMAIL" "PAPERLESS_GPT_USERNAME" "PAPERLESS_AI_HOSTNAME" "DEX_ADMIN_EMAIL" "DEX_ADMIN_PASSWORD_HASH" "EMAIL_FROM" "EMAIL_SMTP" "EMAIL_SMTP_HOST" "EMAIL_SMTP_PORT" "EMAIL_SMTP_USER" "EMAIL_SMTP_PASSWORD" "EMAIL_SMTP_USE_TLS" "DOMAIN")
             for uivar in "${user_input_vars[@]}"; do
                 if [[ "$varName" == "$uivar" ]]; then
                     is_user_input_var=1
@@ -885,7 +963,7 @@ if [[ -z "${generated_values[SERVICE_ROLE_KEY]}" ]]; then
 fi
 
 # Add any custom variables that weren't found in the template
-for var in "FLOWISE_USERNAME" "DASHBOARD_USERNAME" "LETSENCRYPT_EMAIL" "RUN_N8N_IMPORT" "OPENAI_API_KEY" "ANTHROPIC_API_KEY" "GROQ_API_KEY" "PROMETHEUS_USERNAME" "SEARXNG_USERNAME" "LANGFUSE_INIT_USER_EMAIL" "N8N_WORKER_COUNT" "WEAVIATE_USERNAME" "NEO4J_AUTH_USERNAME" "COMFYUI_USERNAME" "RAGAPP_USERNAME" "WHISPER_AUTH_USER" "TTS_AUTH_USER" "LIBRETRANSLATE_USERNAME" "LIGHTRAG_USERNAME" "PERPLEXICA_USERNAME" "ODOO_USERNAME" "BASEROW_USERNAME" "KOPIA_UI_USERNAME" "MAILPIT_USERNAME" "MAIL_INGEST_HOSTNAME" "MAILGUN_WEBHOOK_SIGNING_KEY" "MAILGUN_SMTP_HOST" "MAILGUN_SMTP_PORT" "MAILGUN_SMTP_USER" "MAILGUN_SMTP_PASSWORD" "PRIVATE_DNS_TARGET_IP" "PRIVATE_DNS_HOSTS" "PRIVATE_DNS_FORWARD_1" "PRIVATE_DNS_FORWARD_2" "MAUTIC_ADMIN_EMAIL" "MAUTIC_DB_USER" "INVOICENINJA_ADMIN_EMAIL" "EMAIL_FROM" "EMAIL_SMTP" "EMAIL_SMTP_HOST" "EMAIL_SMTP_PORT" "EMAIL_SMTP_USER" "EMAIL_SMTP_PASSWORD" "EMAIL_SMTP_USE_TLS" "DOMAIN"; do
+for var in "FLOWISE_USERNAME" "DASHBOARD_USERNAME" "LETSENCRYPT_EMAIL" "RUN_N8N_IMPORT" "OPENAI_API_KEY" "ANTHROPIC_API_KEY" "GROQ_API_KEY" "PROMETHEUS_USERNAME" "SEARXNG_USERNAME" "LANGFUSE_INIT_USER_EMAIL" "N8N_WORKER_COUNT" "WEAVIATE_USERNAME" "NEO4J_AUTH_USERNAME" "COMFYUI_USERNAME" "RAGAPP_USERNAME" "WHISPER_AUTH_USER" "TTS_AUTH_USER" "LIBRETRANSLATE_USERNAME" "LIGHTRAG_USERNAME" "PERPLEXICA_USERNAME" "WEBHOOK_TESTER_USERNAME" "ODOO_USERNAME" "BASEROW_USERNAME" "KOPIA_UI_USERNAME" "MAILPIT_USERNAME" "MAIL_INGEST_HOSTNAME" "MAILGUN_WEBHOOK_SIGNING_KEY" "MAILGUN_SMTP_HOST" "MAILGUN_SMTP_PORT" "MAILGUN_SMTP_USER" "MAILGUN_SMTP_PASSWORD" "PRIVATE_DNS_TARGET_IP" "PRIVATE_DNS_HOSTS" "PRIVATE_DNS_FORWARD_1" "PRIVATE_DNS_FORWARD_2" "GPTR_USERNAME" "MAUTIC_ADMIN_EMAIL" "MAUTIC_DB_USER" "INVOICENINJA_ADMIN_EMAIL" "SEAFILE_ADMIN_EMAIL" "PAPERLESS_ADMIN_EMAIL" "PAPERLESS_GPT_USERNAME" "PAPERLESS_AI_HOSTNAME" "DEX_ADMIN_EMAIL" "DEX_ADMIN_PASSWORD_HASH" "EMAIL_FROM" "EMAIL_SMTP" "EMAIL_SMTP_HOST" "EMAIL_SMTP_PORT" "EMAIL_SMTP_USER" "EMAIL_SMTP_PASSWORD" "EMAIL_SMTP_USE_TLS" "DOMAIN"; do
     if [[ ${found_vars["$var"]} -eq 0 && -v generated_values["$var"] ]]; then
         # Before appending, check if it's already in TMP_ENV_FILE to avoid duplicates
         if ! grep -q -E "^${var}=" "$TMP_ENV_FILE"; then
@@ -1020,6 +1098,18 @@ if [[ -z "$FINAL_BOLT_HASH" && -n "$BOLT_PLAIN_PASS" ]]; then
 fi
 _update_or_add_env_var "BOLT_PASSWORD_HASH" "$FINAL_BOLT_HASH"
 
+# --- WEBHOOK_TESTER ---
+WEBHOOK_TESTER_PLAIN_PASS="${generated_values["WEBHOOK_TESTER_PASSWORD"]}"
+FINAL_WEBHOOK_TESTER_HASH="${generated_values[WEBHOOK_TESTER_PASSWORD_HASH]}"
+if [[ -z "$FINAL_WEBHOOK_TESTER_HASH" && -n "$WEBHOOK_TESTER_PLAIN_PASS" ]]; then
+    NEW_HASH=$(_generate_and_get_hash "$WEBHOOK_TESTER_PLAIN_PASS")
+    if [[ -n "$NEW_HASH" ]]; then
+        FINAL_WEBHOOK_TESTER_HASH="$NEW_HASH"
+        generated_values["WEBHOOK_TESTER_PASSWORD_HASH"]="$NEW_HASH"
+    fi
+fi
+_update_or_add_env_var "WEBHOOK_TESTER_PASSWORD_HASH" "$FINAL_WEBHOOK_TESTER_HASH"
+
 # --- RAGAPP ---
 RAGAPP_PLAIN_PASS="${generated_values["RAGAPP_PASSWORD"]}"
 FINAL_RAGAPP_HASH="${generated_values[RAGAPP_PASSWORD_HASH]}"
@@ -1128,6 +1218,48 @@ if [[ -z "$FINAL_MAILPIT_HASH" && -n "$MAILPIT_PLAIN_PASS" ]]; then
 fi
 _update_or_add_env_var "MAILPIT_PASSWORD_HASH" "$FINAL_MAILPIT_HASH"
 
+# --- DEX ADMIN PASSWORD HASH ---
+# Special handling for Dex admin account
+if [[ -z "${generated_values[DEX_ADMIN_EMAIL]}" ]]; then
+    generated_values["DEX_ADMIN_EMAIL"]="$USER_EMAIL"
+    _update_or_add_env_var "DEX_ADMIN_EMAIL" "$USER_EMAIL"
+fi
+
+DEX_ADMIN_PLAIN_PASS="${generated_values["DEX_ADMIN_PASSWORD"]}"
+FINAL_DEX_HASH="${generated_values[DEX_ADMIN_PASSWORD_HASH]}"
+if [[ -z "$FINAL_DEX_HASH" && -n "$DEX_ADMIN_PLAIN_PASS" ]]; then
+    NEW_HASH=$(_generate_and_get_hash "$DEX_ADMIN_PLAIN_PASS")
+    if [[ -n "$NEW_HASH" ]]; then
+        FINAL_DEX_HASH="$NEW_HASH"
+        generated_values["DEX_ADMIN_PASSWORD_HASH"]="$NEW_HASH"
+    fi
+fi
+_update_or_add_env_var "DEX_ADMIN_PASSWORD_HASH" "$FINAL_DEX_HASH"
+
+# --- GPT RESEARCHER ---
+GPTR_PLAIN_PASS="${generated_values["GPTR_PASSWORD"]}"
+FINAL_GPTR_HASH="${generated_values[GPTR_PASSWORD_HASH]}"
+if [[ -z "$FINAL_GPTR_HASH" && -n "$GPTR_PLAIN_PASS" ]]; then
+    NEW_HASH=$(_generate_and_get_hash "$GPTR_PLAIN_PASS")
+    if [[ -n "$NEW_HASH" ]]; then
+        FINAL_GPTR_HASH="$NEW_HASH"
+        generated_values["GPTR_PASSWORD_HASH"]="$NEW_HASH"
+    fi
+fi
+_update_or_add_env_var "GPTR_PASSWORD_HASH" "$FINAL_GPTR_HASH"
+
+# --- PAPERLESS-GPT ---
+PAPERLESS_GPT_PLAIN_PASS="${generated_values["PAPERLESS_GPT_PASSWORD"]}"
+FINAL_PAPERLESS_GPT_HASH="${generated_values[PAPERLESS_GPT_PASSWORD_HASH]}"
+if [[ -z "$FINAL_PAPERLESS_GPT_HASH" && -n "$PAPERLESS_GPT_PLAIN_PASS" ]]; then
+    NEW_HASH=$(_generate_and_get_hash "$PAPERLESS_GPT_PLAIN_PASS")
+    if [[ -n "$NEW_HASH" ]]; then
+        FINAL_PAPERLESS_GPT_HASH="$NEW_HASH"
+        generated_values["PAPERLESS_GPT_PASSWORD_HASH"]="$NEW_HASH"
+    fi
+fi
+_update_or_add_env_var "PAPERLESS_GPT_PASSWORD_HASH" "$FINAL_PAPERLESS_GPT_HASH"
+
 # --- INVOICE NINJA APP_KEY ---
 # Special handling for Invoice Ninja APP_KEY (must be generated with Laravel)
 if [[ -z "${generated_values[INVOICENINJA_APP_KEY]}" ]] && [[ -z "${existing_env_vars[INVOICENINJA_APP_KEY]}" ]]; then
@@ -1159,6 +1291,30 @@ if [[ -z "${generated_values[METABASE_ENCRYPTION_KEY]}" ]]; then
     generated_values["METABASE_ENCRYPTION_KEY"]="$ENCRYPTION_KEY"
     _update_or_add_env_var "METABASE_ENCRYPTION_KEY" "$ENCRYPTION_KEY"
 fi
+
+# --- N8N TASK RUNNER VERSION ---
+# Auto-detect n8n version by pulling image and reading label
+log_info "Detecting n8n version for task runners..."
+
+# Pull latest n8n image (will be reused by docker compose build later)
+log_info "Pulling n8nio/n8n:latest to detect version..."
+if ! docker pull n8nio/n8n:latest > /dev/null 2>&1; then
+    log_error "Could not pull n8nio/n8n:latest. Check internet connection."
+    exit 1
+fi
+
+# Read version from image label
+RUNNERS_VERSION=$(docker inspect n8nio/n8n:latest | \
+  jq -r '.[0].Config.Labels["org.opencontainers.image.version"]' 2>/dev/null)
+
+if [[ -z "$RUNNERS_VERSION" || "$RUNNERS_VERSION" == "null" ]]; then
+    log_error "Could not read version from n8n image label."
+    exit 1
+fi
+
+log_success "Detected n8n/runners version: $RUNNERS_VERSION"
+generated_values["N8N_RUNNERS_VERSION"]="$RUNNERS_VERSION"
+_update_or_add_env_var "N8N_RUNNERS_VERSION" "$RUNNERS_VERSION"
 
 # Ensure DOMAIN is written to .env for backward compatibility
 if [[ -n "${generated_values[DOMAIN]}" ]]; then

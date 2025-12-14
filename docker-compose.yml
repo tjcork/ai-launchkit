@@ -69,6 +69,41 @@ volumes:
   mautic_db_data:
   mautic_redis_data:
   scriberr_data:
+  chatterbox_models:
+  perplexica_data:
+  perplexica_uploads:
+  livekit_data:
+  skyvern-artifacts:
+  skyvern_postgres_data:
+  browser-use-cache:
+  n8n-mcp-data:
+  gpt_researcher_data:
+  ldr_data:
+  n8n-runners-data:
+  seafile_mysql:
+  seafile_data:
+  paperless_postgresql:
+  paperless_redis:
+  paperless_data:
+  paperless_media:
+  opennotebook_data:
+  opennotebook_surreal:
+  webhook_tester_redis:
+  hoppscotch_postgres:
+  uptime-kuma_data:
+  airbyte_destination_data:
+  paperless-gpt-prompts:
+  paperless-ai-data:
+  homepage_config:
+  outline_redis_data:
+  outline_postgres_data:
+  outline_minio_data:
+  outline_data:
+  gitea_postgres_data:
+  gitea_data:
+  docuseal_postgres_data:
+  docuseal_data:
+  dex_data:
 
 x-n8n: &service-n8n
   build:
@@ -93,6 +128,10 @@ x-n8n: &service-n8n
     N8N_METRICS: true
     N8N_PERSONALIZATION_ENABLED: false
     N8N_RUNNERS_ENABLED: true
+    N8N_RUNNERS_MODE: external
+    N8N_RUNNERS_BROKER_LISTEN_ADDRESS: 0.0.0.0
+    N8N_RUNNERS_AUTH_TOKEN: ${N8N_RUNNERS_AUTH_TOKEN}
+    N8N_NATIVE_PYTHON_RUNNER: true
     N8N_TRUST_PROXY: true
     N8N_USER_MANAGEMENT_JWT_SECRET: ${N8N_USER_MANAGEMENT_JWT_SECRET}
     NODE_ENV: production
@@ -250,6 +289,43 @@ services:
     deploy:
       replicas: ${N8N_WORKER_COUNT:-1}
 
+  # ============================================================================
+  # N8N PYTHON TASK RUNNER - Native Python Execution
+  # ============================================================================
+
+  n8n-runner:
+    image: n8nio/runners:${N8N_RUNNERS_VERSION}
+    container_name: n8n-runner
+    profiles: ["n8n"]
+    restart: unless-stopped
+    environment:
+      - N8N_RUNNERS_AUTH_TOKEN=${N8N_RUNNERS_AUTH_TOKEN}
+      - N8N_RUNNERS_TASK_BROKER_URI=http://n8n:5679
+      - N8N_RUNNERS_MAX_CONCURRENCY=5
+      - N8N_RUNNERS_AUTO_SHUTDOWN_TIMEOUT=15
+      - NODE_OPTIONS=--max-old-space-size=512
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE:-Europe/Berlin}
+      - N8N_RUNNERS_PYTHON_ALLOW_BUILTIN=*
+      - N8N_RUNNERS_PYTHON_ALLOW_EXTERNAL=
+    volumes:
+      - ./shared:/data/shared
+      - ./n8n-task-runners.json:/etc/n8n-task-runners.json:ro
+    depends_on:
+      n8n:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5680/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
   qdrant:
     image: qdrant/qdrant
     container_name: qdrant
@@ -333,7 +409,9 @@ services:
       - ./caddy-addon:/etc/caddy/addons:ro
       - caddy-data:/data:rw
       - caddy-config:/config:rw
+      - ./website:/srv/website
     environment:
+      - BASE_DOMAIN=${BASE_DOMAIN}
       - COMFYUI_HOSTNAME=${COMFYUI_HOSTNAME}
       - COMFYUI_PASSWORD_HASH=${COMFYUI_PASSWORD_HASH}
       - COMFYUI_USERNAME=${COMFYUI_USERNAME}
@@ -400,6 +478,36 @@ services:
       - METABASE_HOSTNAME=${METABASE_HOSTNAME}
       - STIRLING_HOSTNAME=${STIRLING_HOSTNAME}
       - STIRLING_USERNAME=${STIRLING_USERNAME}
+      - CHATTERBOX_HOSTNAME=${CHATTERBOX_HOSTNAME}
+      - CHATTERBOX_FRONTEND_HOSTNAME=${CHATTERBOX_FRONTEND_HOSTNAME}
+      - LIVEKIT_HOSTNAME=${LIVEKIT_HOSTNAME}
+      - N8N_MCP_HOSTNAME=${N8N_MCP_HOSTNAME}
+      - GPTR_HOSTNAME=${GPTR_HOSTNAME}
+      - GPTR_USERNAME=${GPTR_USERNAME}
+      - GPTR_PASSWORD_HASH=${GPTR_PASSWORD_HASH}
+      - LDR_HOSTNAME=${LDR_HOSTNAME}
+      - LDR_USERNAME=${LDR_USERNAME}
+      - LDR_PASSWORD_HASH=${LDR_PASSWORD_HASH}
+      - SEAFILE_HOSTNAME=${SEAFILE_HOSTNAME}
+      - PAPERLESS_HOSTNAME=${PAPERLESS_HOSTNAME}
+      - OPENNOTEBOOK_HOSTNAME=${OPENNOTEBOOK_HOSTNAME}
+      - WEBHOOK_TESTER_HOSTNAME=${WEBHOOK_TESTER_HOSTNAME}
+      - WEBHOOK_TESTER_USERNAME=${WEBHOOK_TESTER_USERNAME}
+      - WEBHOOK_TESTER_PASSWORD_HASH=${WEBHOOK_TESTER_PASSWORD_HASH}
+      - HOPPSCOTCH_HOSTNAME=${HOPPSCOTCH_HOSTNAME}
+      - UPTIME_KUMA_HOSTNAME=${UPTIME_KUMA_HOSTNAME}
+      - AIRBYTE_HOSTNAME=${AIRBYTE_HOSTNAME}
+      - PAPERLESS_GPT_HOSTNAME=${PAPERLESS_GPT_HOSTNAME}
+      - PAPERLESS_GPT_USERNAME=${PAPERLESS_GPT_USERNAME}
+      - PAPERLESS_GPT_PASSWORD_HASH=${PAPERLESS_GPT_PASSWORD_HASH}
+      - PAPERLESS_AI_HOSTNAME=${PAPERLESS_AI_HOSTNAME}
+      - HOMEPAGE_HOSTNAME=${HOMEPAGE_HOSTNAME}
+      - OUTLINE_HOSTNAME=${OUTLINE_HOSTNAME}
+      - OUTLINE_S3_HOSTNAME=${OUTLINE_S3_HOSTNAME}
+      - OUTLINE_S3_ADMIN_HOSTNAME=${OUTLINE_S3_ADMIN_HOSTNAME}
+      - GITEA_HOSTNAME=${GITEA_HOSTNAME}
+      - DOCUSEAL_HOSTNAME=${DOCUSEAL_HOSTNAME}
+      - DEX_HOSTNAME=${DEX_HOSTNAME}
       # Mail Services
       - MAILPIT_HOSTNAME=${MAILPIT_HOSTNAME}
       - MAILPIT_USERNAME=${MAILPIT_USERNAME}
@@ -568,7 +676,7 @@ services:
 
   postgres:
     container_name: postgres
-    image: postgres:${POSTGRES_VERSION:-latest}
+    image: postgres:${POSTGRES_VERSION:-17}
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -611,7 +719,7 @@ services:
 
   # Baserow Database Init - Create database
   baserow-init:
-    image: postgres:latest
+    image: postgres:${POSTGRES_VERSION:-17}
     container_name: baserow-init
     profiles: ["baserow"]
     depends_on:
@@ -667,7 +775,7 @@ services:
 
   # NocoDB Database Init - Create database
   nocodb-init:
-    image: postgres:latest
+    image: postgres:${POSTGRES_VERSION:-17}
     container_name: nocodb-init
     profiles: ["nocodb"]
     depends_on:
@@ -1118,20 +1226,21 @@ services:
       - ./shared:/app/data/inputs
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - LLM_BINDING=ollama
-      - LLM_BINDING_HOST=http://ollama:11434
-      - EMBEDDING_BINDING=ollama
-      - EMBEDDING_BINDING_HOST=http://ollama:11434
-      - LLM_MODEL=llama3.2
-      - EMBEDDING_MODEL=nomic-embed-text
-      - EMBEDDING_DIM=768
+      - LLM_BINDING=openai
+      - LLM_BINDING_HOST=https://api.openai.com/v1
+      - EMBEDDING_BINDING=openai
+      - EMBEDDING_BINDING_HOST=https://api.openai.com/v1
+      - LLM_MODEL=gpt-4o-mini
+      - EMBEDDING_MODEL=text-embedding-3-small
+      - EMBEDDING_DIM=1536
       - WORKSPACE=${LIGHTRAG_WORKSPACE:-default}
       - AUTH_ACCOUNTS=${LIGHTRAG_AUTH_ACCOUNTS}
       - TOKEN_SECRET=${LIGHTRAG_TOKEN_SECRET}
+      - TIMEOUT=600
 
   # Odoo Database Init - Create user and DB
   odoo-init:
-    image: postgres:latest
+    image: postgres:${POSTGRES_VERSION:-17}
     container_name: odoo-init
     profiles: ["odoo"]
     depends_on:
@@ -1225,7 +1334,7 @@ services:
       start_period: 60s
 
   twenty-db:
-    image: postgres:16-alpine
+    image: postgres:${TWENTY_POSTGRES_VERSION:-16-alpine}
     container_name: twenty-db
     profiles: ["twenty-crm"]
     restart: unless-stopped
@@ -1433,7 +1542,7 @@ services:
 
   # Vikunja Database Init - Create database
   vikunja-init:
-    image: postgres:latest
+    image: postgres:${POSTGRES_VERSION:-17}
     container_name: vikunja-init
     profiles: ["vikunja"]
     depends_on:
@@ -1563,9 +1672,7 @@ services:
       start_period: 60s
 
   perplexica:
-    build:
-      context: ./perplexica
-      dockerfile: app.dockerfile
+    image: itzcrazykns1337/perplexica:latest
     container_name: perplexica
     profiles: ["perplexica"]
     restart: unless-stopped
@@ -1575,9 +1682,8 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
     volumes:
-      - ./perplexica/backend-dbstore:/home/perplexica/data
-      - ./perplexica/uploads:/home/perplexica/uploads
-      - ./perplexica/config.toml:/home/perplexica/config.toml
+      - perplexica_data:/home/perplexica/data
+      - perplexica_uploads:/home/perplexica/uploads
       - ./shared:/data/shared
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -1931,6 +2037,83 @@ services:
     depends_on:
       - jitsi-prosody
 
+  # ============================================================================
+  # LIVEKIT - Real-time Voice & Video Infrastructure
+  # ============================================================================
+  
+  # LiveKit Server - WebRTC SFU and API
+  livekit-server:
+    image: livekit/livekit-server:latest
+    container_name: livekit-server
+    profiles: ["livekit"]
+    restart: unless-stopped
+    volumes:
+      - livekit_data:/data
+      - ./livekit/entrypoint.sh:/entrypoint.sh:ro
+    environment:
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    ports:
+      - "7880:7880"
+      - "7882:7882/tcp"
+      - "50000-50100:50000-50100/udp"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:7880"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  livekit-agents:
+    image: python:3.11-slim
+    container_name: livekit-agents
+    profiles: ["livekit"]
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./livekit-agents:/app
+      - ./shared:/data/shared
+    environment:
+      - LIVEKIT_URL=ws://livekit-server:7880
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+      - WHISPER_URL=http://faster-whisper:8000
+      - TTS_URL=http://openedai-speech:8000
+      - OLLAMA_URL=http://ollama:11434
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OLLAMA_MODEL=${OLLAMA_MODEL}
+    depends_on:
+      - livekit-server
+    command: >
+      bash -c "
+      pip install livekit-agents livekit-plugins-openai livekit-plugins-silero &&
+      python agent.py start
+      "
+
+  # ============================================================================
+  # UPTIME KUMA - Beautiful Uptime Monitoring
+  # ============================================================================
+  uptime-kuma:
+    image: louislam/uptime-kuma:2
+    container_name: uptime-kuma
+    profiles: ["uptime-kuma"]
+    restart: unless-stopped
+    volumes:
+      - uptime-kuma_data:/app/data
+      - ./shared:/data/shared
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - TZ=${TZ:-Europe/Berlin}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3001 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
   # VAULTWARDEN - Self-hosted Password Manager
   vaultwarden:
     image: vaultwarden/server:latest
@@ -2183,7 +2366,7 @@ services:
   
   # Database Init für Formbricks
   formbricks-init:
-    image: postgres:latest
+    image: postgres:${POSTGRES_VERSION:-17}
     container_name: formbricks-init
     profiles: ["formbricks"]
     depends_on:
@@ -2297,7 +2480,7 @@ services:
       start_period: 120s
 
   metabase_db:
-    image: postgres:16-alpine
+    image: postgres:${METABASE_POSTGRES_VERSION:-16-alpine}
     container_name: metabase_db
     profiles: ["metabase"]
     restart: unless-stopped
@@ -2385,3 +2568,944 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+
+  # ============================================
+  # TTS Chatterbox - State-of-the-Art Text-to-Speech
+  # ============================================
+  chatterbox-tts:
+    build:
+      context: ./chatterbox-frontend
+      dockerfile: docker/Dockerfile
+    container_name: chatterbox-tts
+    profiles: ["tts-chatterbox"]
+    restart: unless-stopped
+    volumes:
+      - chatterbox_models:/app/models
+      - ./shared/tts/voices:/app/voice-samples
+      - ./shared:/data/shared
+    environment:
+      - DEVICE=${CHATTERBOX_DEVICE:-cpu}
+      - EXAGGERATION=${CHATTERBOX_EXAGGERATION:-0.5}
+      - API_KEY=${CHATTERBOX_API_KEY}
+      - MAX_LENGTH=${CHATTERBOX_MAX_LENGTH:-500}
+      - DEFAULT_VOICE=${CHATTERBOX_DEFAULT_VOICE:-default}
+      - MEMORY_CLEANUP_INTERVAL=${CHATTERBOX_MEMORY_CLEANUP:-60}
+      - CUDA_CACHE_CLEAR_INTERVAL=${CHATTERBOX_CUDA_CLEANUP:-120}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:4123/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Chatterbox Frontend (Web UI)
+  chatterbox-frontend:
+    build:
+      context: ./chatterbox-frontend/frontend
+      dockerfile: Dockerfile
+    container_name: chatterbox-frontend
+    profiles: ["tts-chatterbox"]
+    restart: unless-stopped
+    depends_on:
+      - chatterbox-tts
+    environment:
+      - VITE_API_URL=http://chatterbox-tts:5123
+
+  # ============================================================================
+  # AI SECURITY SUITE - LLM Protection & GDPR-compliant PII Detection
+  # ============================================================================
+  
+  # LLM Guard - AI Security & Prompt Protection
+  llm-guard:
+    image: laiyer/llm-guard-api:latest
+    container_name: llm-guard
+    profiles: ["ai-security"]
+    restart: unless-stopped
+    environment:
+      - AUTH_TOKEN=${LLM_GUARD_TOKEN}
+      - LOG_LEVEL=${LLM_GUARD_LOG_LEVEL:-INFO}
+      - APP_WORKERS=2
+      - CACHE_MAX_SIZE=100
+      - CACHE_TTL=3600
+      - SCAN_FAIL_FAST=false
+    volumes:
+      - ./shared:/data/shared
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  # Presidio Analyzer - PII Detection (GDPR)
+  presidio-analyzer:
+    image: mcr.microsoft.com/presidio-analyzer:latest
+    container_name: presidio-analyzer
+    profiles: ["ai-security"]
+    restart: unless-stopped
+    environment:
+      - PORT=3000
+      - ANALYZER_MIN_SCORE=${PRESIDIO_MIN_SCORE:-0.5}
+    volumes:
+      - ./shared:/data/shared
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Presidio Anonymizer - Data Anonymization
+  presidio-anonymizer:
+    image: mcr.microsoft.com/presidio-anonymizer:latest
+    container_name: presidio-anonymizer
+    profiles: ["ai-security"]
+    restart: unless-stopped
+    environment:
+      - PORT=3000
+    volumes:
+      - ./shared:/data/shared
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Flair NER - German/Multi-language PII Detection
+  flair-pii:
+    build:
+      context: ./dockerfiles/flair-pii
+      dockerfile: Dockerfile
+    container_name: flair-pii
+    profiles: ["ai-security"]
+    restart: unless-stopped
+    volumes:
+      - ./shared:/data/shared
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health').raise_for_status()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  # ============================================================================
+  # BROWSER AUTOMATION SUITE - Browserless + Skyvern + Browser-use
+  # ============================================================================
+  
+  # Browserless - Centralized Chrome Runtime
+  browserless:
+    image: ghcr.io/browserless/chromium:latest
+    container_name: browserless
+    profiles: ["browser-suite"]
+    restart: unless-stopped
+    environment:
+      - TOKEN=${BROWSERLESS_TOKEN}
+      - CONCURRENT=${BROWSERLESS_CONCURRENT:-10}
+      - TIMEOUT=${BROWSERLESS_TIMEOUT:-120000}
+      - MAX_QUEUE_LENGTH=${BROWSERLESS_QUEUE:-10}
+      - ENABLE_DEBUGGER=${BROWSERLESS_DEBUGGER:-false}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/pressure"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    expose:
+      - "3000"
+
+  # Skyvern - Vision-based Browser Automation
+  skyvern-postgres:
+    image: postgres:15-alpine
+    container_name: skyvern-postgres
+    profiles: ["browser-suite"]
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=skyvern
+      - POSTGRES_PASSWORD=skyvern
+      - POSTGRES_DB=skyvern
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - skyvern_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U skyvern"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  skyvern:
+    image: public.ecr.aws/skyvern/skyvern:latest
+    container_name: skyvern
+    profiles: ["browser-suite"]
+    restart: unless-stopped
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DATABASE_STRING=postgresql+psycopg://skyvern:skyvern@skyvern-postgres:5432/skyvern
+      - SKYVERN_API_KEY=${SKYVERN_API_KEY}
+      - BROWSERLESS_URL=ws://browserless:3000?token=${BROWSERLESS_TOKEN}
+      - ENABLE_OPENAI=true
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./shared/skyvern-artifacts:/data/artifacts
+      - ./shared/skyvern-videos:/data/videos
+    depends_on:
+      skyvern-postgres:
+        condition: service_healthy
+      browserless:
+        condition: service_started
+
+  # Browser-use - LLM-powered Browser Control
+  browser-use:
+    image: python:3.11-slim
+    container_name: browser-use
+    profiles: ["browser-suite"]
+    restart: unless-stopped
+    working_dir: /workspace
+    command: >
+      bash -c "
+      apt-get update && apt-get install -y curl wget && 
+      pip install --no-cache-dir browser-use playwright langchain openai anthropic &&
+      playwright install-deps chromium &&
+      playwright install chromium &&
+      echo 'Browser-use ready - execute via: docker exec browser-use python script.py' &&
+      tail -f /dev/null
+      "
+    environment:
+      - BROWSERLESS_URL=ws://browserless:3000?token=${BROWSERLESS_TOKEN}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    volumes:
+      - ./shared:/workspace
+      - browser-use-cache:/root/.cache
+    depends_on:
+      - browserless
+
+  # ============================================================================
+  # N8N-MCP - Model Context Protocol for AI Workflow Generation
+  # ============================================================================
+  
+  # n8n-MCP - Model Context Protocol Server
+  n8n-mcp:
+    build:
+      context: https://github.com/czlonkowski/n8n-mcp.git
+      dockerfile: Dockerfile
+    container_name: n8n-mcp
+    profiles: ["n8n-mcp"]
+    restart: unless-stopped
+    environment:
+      - AUTH_TOKEN=${N8N_MCP_TOKEN}
+      - USE_FIXED_HTTP=true
+      - N8N_HOST=n8n
+      - N8N_API_URL=http://n8n:5678
+      - N8N_API_KEY=${N8N_API_KEY}
+      - LOG_LEVEL=info
+      - MCP_MODE=http
+      - PORT=3000
+    volumes:
+      - n8n-mcp-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ============================================================================
+  # AI RESEARCH TOOLS - GPT Researcher & Local Deep Research
+  # ============================================================================
+  
+  # GPT Researcher - Autonomous Research Agent (2000+ word reports)
+  gpt-researcher:
+    image: gptresearcher/gpt-researcher:latest
+    container_name: gpt-researcher
+    profiles: ["gpt-researcher"]
+    restart: unless-stopped
+    volumes:
+      - gpt_researcher_data:/usr/src/app/outputs
+      - ./shared/research:/usr/src/app/my-docs
+    environment:
+      # OpenAI Configuration (Default)
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LLM_PROVIDER=openai
+      - FAST_LLM=openai:gpt-4o-mini
+      - SMART_LLM=openai:gpt-4o-mini  
+      - STRATEGIC_LLM=openai:gpt-4o-mini
+      - SUMMARY_LLM=openai:gpt-4o-mini
+
+      # ==== Ollama Configuration (Alternative) ====
+      # Uncomment these and comment out OpenAI above to use Ollama:
+      # - LLM_PROVIDER=ollama
+      # - OLLAMA_BASE_URL=http://ollama:11434
+      # - FAST_LLM=ollama/qwen2.5:7b-instruct-q4_K_M
+      # - SMART_LLM=ollama/qwen2.5:7b-instruct-q4_K_M
+      # - STRATEGIC_LLM=ollama/qwen2.5:7b-instruct-q4_K_M
+      # - SUMMARY_LLM=ollama/qwen2.5:7b-instruct-q4_K_M
+
+      # Search & Report Configuration  
+      - RETRIEVER=${GPTR_RETRIEVER:-searx}
+      - SEARX_URL=http://searxng:8080
+      - REPORT_FORMAT=${GPTR_REPORT_FORMAT:-APA}
+      - MAX_ITERATIONS=${GPTR_MAX_ITERATIONS:-5}
+      - TOTAL_WORDS=${GPTR_TOTAL_WORDS:-2000}
+      - LANGUAGE=${GPTR_LANGUAGE:-english}
+      - DOC_PATH=/usr/src/app/my-docs
+      
+      # Server Configuration
+      - HOST=0.0.0.0
+      - PORT=8000
+      - BACKEND_WS_MODE=none
+    user: root
+    ports:
+      - "8555:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/api/health || curl -fsS http://localhost:8000 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    depends_on:
+      - searxng
+
+  # GPT Researcher Frontend (NextJS UI)
+  gpt-researcher-ui:
+    image: gptresearcher/gptr-nextjs:latest
+    container_name: gpt-researcher-ui
+    profiles: ["gpt-researcher"]
+    restart: unless-stopped
+    environment:
+      - NEXT_PUBLIC_GPTR_API_URL=https://${GPTR_HOSTNAME}
+      - CHOKIDAR_USEPOLLING=true
+      - LOGGING_LEVEL=INFO
+    depends_on:
+      - gpt-researcher
+
+  # Local Deep Research - LangChain's Iterative Research System
+  local-deep-research:
+    build:
+      context: https://github.com/langchain-ai/local-deep-researcher.git
+      dockerfile: Dockerfile
+    container_name: local-deep-research
+    profiles: ["local-deep-research"]
+    restart: unless-stopped
+    volumes:
+      - ldr_data:/data
+      - ./shared/research:/data/shared
+    environment:
+      # LLM Configuration (using existing Ollama!) - KORRIGIERT!
+      - LLM_PROVIDER=${LDR_LLM_PROVIDER:-ollama}
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - LOCAL_LLM=${LDR_LOCAL_MODEL:-qwen2.5:7b-instruct-q4_K_M}
+      
+      # Search Configuration (using existing SearXNG!)
+      - SEARCH_API=${LDR_SEARCH_API:-searxng}
+      - SEARXNG_URL=http://searxng:8080
+      - MAX_WEB_RESEARCH_LOOPS=${LDR_MAX_LOOPS:-5}
+      - FETCH_FULL_PAGE=${LDR_FETCH_FULL:-false}
+      
+      # Optional API Keys
+      - TAVILY_API_KEY=${TAVILY_API_KEY:-}
+      - PERPLEXITY_API_KEY=${PERPLEXITY_API_KEY:-}
+      
+      # Data Directory
+      - LDR_DATA_DIR=/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:2024/health || curl -fsS http://localhost:2024 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    depends_on:
+      - searxng
+
+  # ========== SEAFILE STACK ==========
+  seafile-db:
+    image: mariadb:10.11
+    container_name: seafile-mariadb
+    profiles: ["seafile"]
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${SEAFILE_DB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=seafile_db
+      - MYSQL_USER=seafile
+      - MYSQL_PASSWORD=${SEAFILE_DB_PASSWORD}
+    volumes:
+      - seafile_mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  seafile:
+    image: seafileltd/seafile-mc:latest
+    container_name: seafile
+    profiles: ["seafile"]
+    restart: unless-stopped
+    environment:
+      - DB_HOST=seafile-db
+      - DB_ROOT_PASSWD=${SEAFILE_DB_ROOT_PASSWORD}
+      - DB_NAME=seafile_db
+      - DB_USER=seafile
+      - DB_PASSWORD=${SEAFILE_DB_PASSWORD}
+      - SEAFILE_SERVER_LETSENCRYPT=false
+      - SEAFILE_ADMIN_EMAIL=${SEAFILE_ADMIN_EMAIL}
+      - SEAFILE_ADMIN_PASSWORD=${SEAFILE_ADMIN_PASSWORD}
+      - SEAFILE_SERVER_HOSTNAME=${SEAFILE_HOSTNAME}
+      - TIME_ZONE=Europe/Berlin
+      - FORCE_HTTPS_IN_CONF=true
+    volumes:
+      - seafile_data:/shared
+      - ./shared:/shared/paperless-bridge
+      - ./scripts/seafile-init.sh:/init-fix.sh:ro
+    depends_on:
+      - seafile-db
+    healthcheck:
+      test: ["CMD-SHELL", "bash /init-fix.sh && curl -f http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ========== PAPERLESS-NGX STACK ==========
+  paperless-redis:
+    image: redis:7-alpine
+    container_name: paperless-redis
+    profiles: ["paperless"]
+    restart: unless-stopped
+    volumes:
+      - paperless_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 5
+
+  paperless-db:
+    image: postgres:17-alpine
+    container_name: paperless-postgres
+    profiles: ["paperless"]
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=paperless
+      - POSTGRES_USER=paperless
+      - POSTGRES_PASSWORD=${PAPERLESS_DB_PASSWORD}
+    volumes:
+      - paperless_postgresql:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paperless"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  paperless:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    container_name: paperless-ngx
+    profiles: ["paperless"]
+    restart: unless-stopped
+    environment:
+      - PAPERLESS_REDIS=redis://paperless-redis:6379
+      - PAPERLESS_DBENGINE=postgresql
+      - PAPERLESS_DBHOST=paperless-db
+      - PAPERLESS_DBNAME=paperless
+      - PAPERLESS_DBUSER=paperless
+      - PAPERLESS_DBPASS=${PAPERLESS_DB_PASSWORD}
+      - PAPERLESS_SECRET_KEY=${PAPERLESS_SECRET_KEY}
+      - PAPERLESS_TIME_ZONE=Europe/Berlin
+      - PAPERLESS_OCR_LANGUAGE=deu+eng
+      - PAPERLESS_ADMIN_USER=${PAPERLESS_ADMIN_EMAIL}
+      - PAPERLESS_ADMIN_PASSWORD=${PAPERLESS_ADMIN_PASSWORD}
+      - PAPERLESS_ADMIN_MAIL=${PAPERLESS_ADMIN_EMAIL}
+      - PAPERLESS_URL=https://${PAPERLESS_HOSTNAME}
+      - PAPERLESS_FILENAME_FORMAT={created_year}/{correspondent}/{created_date}_{title}
+      - PAPERLESS_CONSUMER_RECURSIVE=true
+      - PAPERLESS_CONSUMER_SUBDIRS_AS_TAGS=true
+    volumes:
+      - paperless_data:/usr/src/paperless/data
+      - paperless_media:/usr/src/paperless/media
+      - ./shared:/usr/src/paperless/consume/seafile
+    depends_on:
+      - paperless-db
+      - paperless-redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ===========================================
+  # PAPERLESS-GPT - Superior OCR with Vision LLMs
+  # ===========================================
+  paperless-gpt:
+    image: ghcr.io/icereed/paperless-gpt:latest
+    container_name: paperless-gpt
+    profiles: ["paperless-ai"]
+    restart: unless-stopped
+    environment:
+      # Paperless Connection
+      - PAPERLESS_BASE_URL=http://paperless-ngx:8000
+      - PAPERLESS_API_TOKEN=${PAPERLESS_API_TOKEN}
+      - PAPERLESS_PUBLIC_URL=https://${PAPERLESS_HOSTNAME}
+      
+      # Tags Configuration
+      - MANUAL_TAG=paperless-gpt
+      - AUTO_TAG=paperless-gpt-auto
+      - AUTO_OCR_TAG=paperless-gpt-ocr-auto
+      
+      # ===== DEFAULT: OpenAI Configuration (for CPU VPS) =====
+      - LLM_PROVIDER=${PAPERLESS_GPT_LLM_PROVIDER:-openai}
+      - LLM_MODEL=${PAPERLESS_GPT_LLM_MODEL:-gpt-4o-mini}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LLM_LANGUAGE=${PAPERLESS_GPT_LANGUAGE:-German}
+      
+      # ===== ALTERNATIVE: Ollama Configuration (uncomment if using Ollama) =====
+      # - LLM_PROVIDER=${PAPERLESS_GPT_LLM_PROVIDER:-ollama}
+      # - LLM_MODEL=${PAPERLESS_GPT_LLM_MODEL:-qwen2.5:7b}
+      # - OLLAMA_HOST=http://ollama:11434
+      
+      # Vision LLM for OCR (OpenAI by default)
+      - OCR_PROVIDER=llm
+      - VISION_LLM_PROVIDER=${PAPERLESS_GPT_VISION_PROVIDER:-openai}
+      - VISION_LLM_MODEL=${PAPERLESS_GPT_VISION_MODEL:-gpt-4o-mini}
+      
+      # ===== ALTERNATIVE: Ollama Vision (uncomment if using Ollama) =====
+      # - VISION_LLM_PROVIDER=${PAPERLESS_GPT_VISION_PROVIDER:-ollama}
+      # - VISION_LLM_MODEL=${PAPERLESS_GPT_VISION_MODEL:-minicpm-v}
+      
+      - OCR_PROCESS_MODE=image
+      - OCR_LIMIT_PAGES=${PAPERLESS_GPT_OCR_LIMIT:-0}
+      
+      # Auto-generation settings
+      - AUTO_GENERATE_TITLE=true
+      - AUTO_GENERATE_TAGS=true
+      - AUTO_GENERATE_CORRESPONDENTS=true
+      - AUTO_GENERATE_CREATED_DATE=true
+      
+      # Performance
+      - TOKEN_LIMIT=${PAPERLESS_GPT_TOKEN_LIMIT:-0}
+      - LOG_LEVEL=info
+      # - LISTEN_INTERFACE=0.0.0.0:8080
+    volumes:
+      - paperless-gpt-prompts:/app/prompts
+      - ./shared:/data/shared
+    depends_on:
+      - paperless
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ===========================================
+  # PAPERLESS-AI - RAG Chat & Semantic Search
+  # ===========================================
+  paperless-ai:
+    image: clusterzx/paperless-ai:latest
+    container_name: paperless-ai
+    profiles: ["paperless-ai"]
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges=true
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - PAPERLESS_AI_PORT=${PAPERLESS_AI_PORT:-3000}
+      - RAG_SERVICE_URL=http://paperless-ai:8000
+      - RAG_SERVICE_ENABLED=true
+    volumes:
+      - paperless-ai-data:/app/data
+      - ./shared:/data/shared
+    depends_on:
+      - paperless
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ============================================================================
+  # OPEN NOTEBOOK - Privacy-First Alternative zu Google NotebookLM
+  # ============================================================================
+  
+  # Open Notebook - AI-Powered Knowledge Management & Research Platform
+  opennotebook:
+    image: lfnovo/open_notebook:v1-latest-single
+    container_name: opennotebook
+    profiles: ["opennotebook"]
+    restart: unless-stopped
+    environment:
+      # AI Provider Keys (mindestens einer erforderlich)
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      
+      # SurrealDB Connection (Embedded Database)
+      - SURREAL_URL=ws://localhost:8000/rpc
+      - SURREAL_USER=root
+      - SURREAL_PASSWORD=root
+      - SURREAL_NAMESPACE=open_notebook
+      - SURREAL_DATABASE=production
+      
+      # API_URL for the frontend
+      - API_URL=https://${OPENNOTEBOOK_HOSTNAME}
+
+      # Authentication (Native Open Notebook Password)
+      - OPEN_NOTEBOOK_PASSWORD=${OPENNOTEBOOK_PASSWORD}
+      
+    volumes:
+      - ./opennotebook/notebook_data:/app/data
+      - ./opennotebook/surreal_data:/mydata
+      - ./shared:/app/shared
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8502 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ============================================================================
+  # WEBHOOK TESTING SUITE - Testing & Debugging Webhooks
+  # ============================================================================
+  
+  # Dedicated Redis for Webhook Tester
+  webhook-tester-redis:
+    image: redis:7-alpine
+    container_name: webhook-tester-redis
+    profiles: ["webhook-testing"]
+    restart: unless-stopped
+    volumes:
+      - webhook_tester_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Webhook Tester - Receive and Debug Webhooks
+  webhook-tester:
+    image: ghcr.io/tarampampam/webhook-tester:2
+    container_name: webhook-tester
+    profiles: ["webhook-testing"]
+    restart: unless-stopped
+    environment:
+      - AUTO_CREATE_SESSIONS=true
+      - STORAGE_DRIVER=redis
+      - PUBSUB_DRIVER=redis
+      - REDIS_DSN=redis://webhook-tester-redis:6379/0
+      - MAX_REQUESTS=100
+      - IGNORE_HEADER_PREFIX=X-Forwarded-
+      - IGNORE_HEADER_PREFIX=X-Real-
+    depends_on:
+      webhook-tester-redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Hoppscotch PostgreSQL Database
+  hoppscotch-db:
+    image: postgres:17-alpine
+    container_name: hoppscotch-db
+    profiles: ["webhook-testing"]
+    restart: unless-stopped
+    volumes:
+      - hoppscotch_postgres:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=hoppscotch
+      - POSTGRES_USER=hoppscotch
+      - POSTGRES_PASSWORD=${HOPPSCOTCH_DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hoppscotch"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Hoppscotch Database Migration
+  hoppscotch-migrate:
+    image: hoppscotch/hoppscotch:latest
+    container_name: hoppscotch-migrate
+    profiles: ["webhook-testing"]
+    environment:
+      - DATABASE_URL=postgresql://hoppscotch:${HOPPSCOTCH_DB_PASSWORD}@hoppscotch-db:5432/hoppscotch
+    depends_on:
+      hoppscotch-db:
+        condition: service_healthy
+    command: sh -c "pnpx prisma migrate deploy --schema /dist/backend/prisma/schema.prisma"
+    restart: "no"
+
+  # Hoppscotch - API Testing Platform (All-in-One)
+  hoppscotch:
+    image: hoppscotch/hoppscotch:latest
+    container_name: hoppscotch
+    profiles: ["webhook-testing"]
+    restart: unless-stopped
+    environment:
+      # Database Configuration
+      - DATABASE_URL=postgresql://hoppscotch:${HOPPSCOTCH_DB_PASSWORD}@hoppscotch-db:5432/hoppscotch
+      - ENABLE_SUBPATH_BASED_ACCESS=false
+      
+      # Security & Secrets
+      - JWT_SECRET=${HOPPSCOTCH_JWT_SECRET}
+      - SESSION_SECRET=${HOPPSCOTCH_SESSION_SECRET}
+      - REFRESH_TOKEN_SECRET=${HOPPSCOTCH_REFRESH_TOKEN_SECRET}
+      - DATA_ENCRYPTION_KEY=${HOPPSCOTCH_DATA_ENCRYPTION_KEY}
+      
+      # URLs
+      - REDIRECT_URL=https://${HOPPSCOTCH_HOSTNAME}
+      - WHITELISTED_ORIGINS=https://${HOPPSCOTCH_HOSTNAME}
+      - VITE_BASE_URL=https://${HOPPSCOTCH_HOSTNAME}
+      - VITE_SHORTCODE_BASE_URL=https://${HOPPSCOTCH_HOSTNAME}
+      - VITE_ADMIN_URL=https://${HOPPSCOTCH_HOSTNAME}
+      
+      # Mail Configuration (nutzt Mailpit)
+      - MAILER_SMTP_ENABLE=true
+      - MAILER_USE_CUSTOM_CONFIGS=true
+      - MAILER_SMTP_HOST=mailpit
+      - MAILER_SMTP_PORT=1025
+      - MAILER_SMTP_SECURE=false
+      - MAILER_SMTP_AUTH=false
+      - MAILER_ADDRESS_FROM=hoppscotch@${BASE_DOMAIN}
+      
+      # Features
+      - RATE_LIMIT_TTL=60
+      - RATE_LIMIT_MAX=100
+      - VITE_ALLOWED_AUTH_PROVIDERS=EMAIL
+      
+    volumes:
+      - ./shared:/data/shared
+    depends_on:
+      hoppscotch-db:
+        condition: service_healthy
+      hoppscotch-migrate:
+        condition: service_completed_successfully
+      mailpit:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3000/api/health || curl -fsS http://localhost:3000 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # ============================================================================
+  # AIRBYTE DESTINATION - PostgreSQL for synced marketing data
+  # ============================================================================
+  
+  # Destination database for Airbyte synced data
+  # Connect Metabase here for analytics dashboards
+  airbyte_destination_db:
+    image: postgres:17-alpine
+    container_name: airbyte_destination_db
+    profiles: ["airbyte"]
+    restart: unless-stopped
+    volumes:
+      - airbyte_destination_data:/var/lib/postgresql/data
+      - ./scripts/airbyte_init_db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    environment:
+      - POSTGRES_USER=airbyte
+      - POSTGRES_PASSWORD=${AIRBYTE_DESTINATION_DB_PASSWORD}
+      - POSTGRES_DB=marketing_data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airbyte"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # Homepage - Dashboard
+  # ============================================
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    profiles: ["homepage"]
+    restart: unless-stopped
+    environment:
+      - HOMEPAGE_VAR_TITLE=AI LaunchKit Dashboard
+      - HOMEPAGE_VAR_SEARCH_PROVIDER=searxng
+      - HOMEPAGE_VAR_HEADER_STYLE=boxed
+      - HOMEPAGE_VAR_LAYOUT_STYLE=row
+      - HOMEPAGE_VAR_COLOR_PALETTE=slate
+      - PUID=1000
+      - PGID=999
+      - HOMEPAGE_ALLOWED_HOSTS=*
+    volumes:
+      - ./homepage_config:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    user: "1000:999"
+
+  # ============================================
+  # Outline - Wiki/Dokumentation
+  # ============================================
+  outline-redis:
+    image: redis:7-alpine
+    container_name: outline-redis
+    profiles: ["outline"]
+    restart: unless-stopped
+    volumes:
+      - outline_redis_data:/data
+
+  outline-postgres:
+    image: postgres:17-alpine
+    container_name: outline-postgres
+    profiles: ["outline"]
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=outline
+      - POSTGRES_PASSWORD=outline
+      - POSTGRES_DB=outline
+    volumes:
+      - outline_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U outline"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  outline-minio:
+    image: minio/minio:latest
+    container_name: outline-minio
+    profiles: ["outline"]
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=${OUTLINE_MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${OUTLINE_MINIO_ROOT_PASSWORD}
+      - MINIO_BROWSER_REDIRECT_URL=https://${OUTLINE_S3_ADMIN_HOSTNAME}
+    volumes:
+      - outline_minio_data:/data
+
+  outline:
+    image: docker.getoutline.com/outlinewiki/outline:latest
+    container_name: outline
+    profiles: ["outline"]
+    restart: unless-stopped
+    command: sh -c "yarn start --env=production-ssl-disabled"
+    depends_on:
+      - outline-postgres
+      - outline-redis
+      - outline-minio
+      - dex
+    environment:
+      - NODE_ENV=production
+      - SECRET_KEY=${OUTLINE_SECRET_KEY}
+      - UTILS_SECRET=${OUTLINE_UTILS_SECRET}
+      - DATABASE_URL=postgres://outline:outline@outline-postgres:5432/outline
+      - DATABASE_CONNECTION_POOL_MIN=5
+      - DATABASE_CONNECTION_POOL_MAX=100
+      - PGSSLMODE=disable
+      - REDIS_URL=redis://outline-redis:6379
+      - URL=https://${OUTLINE_HOSTNAME}
+      - PORT=3000
+      - FILE_STORAGE=s3
+      - FILE_STORAGE_UPLOAD_MAX_SIZE=26214400
+      - AWS_ACCESS_KEY_ID=${OUTLINE_MINIO_ROOT_USER}
+      - AWS_SECRET_ACCESS_KEY=${OUTLINE_MINIO_ROOT_PASSWORD}
+      - AWS_REGION=us-east-1
+      - AWS_S3_UPLOAD_BUCKET_URL=https://${OUTLINE_S3_HOSTNAME}
+      - AWS_S3_UPLOAD_BUCKET_NAME=outline
+      - AWS_S3_FORCE_PATH_STYLE=true
+      - AWS_S3_ACL=private
+      # OIDC Configuration with Dex (instead of Google/Slack/etc.)
+      - OIDC_CLIENT_ID=outline
+      - OIDC_CLIENT_SECRET=${OUTLINE_OIDC_CLIENT_SECRET}
+      - OIDC_AUTH_URI=https://${DEX_HOSTNAME}/auth
+      - OIDC_TOKEN_URI=http://dex:5556/token
+      - OIDC_USERINFO_URI=http://dex:5556/userinfo
+      - OIDC_DISPLAY_NAME=Login
+      - OIDC_SCOPES=openid profile email
+      - FORCE_HTTPS=false
+      - SECURE_COOKIES=false
+      - TRUST_PROXY=true
+    volumes:
+      - outline_data:/var/lib/outline/data
+
+  # ============================================
+  # Gitea - Git Hosting
+  # ============================================
+  gitea-db:
+    image: postgres:17-alpine
+    container_name: gitea-db
+    profiles: ["gitea"]
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=gitea
+      - POSTGRES_PASSWORD=gitea
+      - POSTGRES_DB=gitea
+    volumes:
+      - gitea_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gitea"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  gitea:
+    image: gitea/gitea:latest
+    container_name: gitea
+    profiles: ["gitea"]
+    restart: unless-stopped
+    depends_on:
+      - gitea-db
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - GITEA__database__DB_TYPE=postgres
+      - GITEA__database__HOST=gitea-db:5432
+      - GITEA__database__NAME=gitea
+      - GITEA__database__USER=gitea
+      - GITEA__database__PASSWD=gitea
+    ports:
+      - "${GITEA_SSH_PORT:-2222}:22"
+    volumes:
+      - gitea_data:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+
+  # ============================================
+  # DocuSeal - E-Signatures
+  # ============================================
+  docuseal-db:
+    image: postgres:17-alpine
+    container_name: docuseal-db
+    profiles: ["docuseal"]
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=docuseal
+      - POSTGRES_PASSWORD=${DOCUSEAL_DB_PASSWORD}
+      - POSTGRES_DB=docuseal
+    volumes:
+      - docuseal_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U docuseal"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  docuseal:
+    image: docuseal/docuseal:latest
+    container_name: docuseal
+    profiles: ["docuseal"]
+    restart: unless-stopped
+    depends_on:
+      - docuseal-db
+    environment:
+      - DATABASE_URL=postgresql://docuseal:${DOCUSEAL_DB_PASSWORD}@docuseal-db:5432/docuseal
+      - FORCE_SSL=false
+    volumes:
+      - docuseal_data:/data
+
+  # Dex - Identity Provider for Outline
+  dex:
+    image: ghcr.io/dexidp/dex:v2.37.0
+    container_name: dex
+    profiles: ["outline"]
+    restart: unless-stopped
+    volumes:
+      - ./dex/config.yaml:/etc/dex/config.yaml:ro
+      - dex_data:/var/dex
+    environment:
+      - DEX_FRONTEND_DIR=/srv/dex/web
+    command: ["dex", "serve", "/etc/dex/config.yaml"]
