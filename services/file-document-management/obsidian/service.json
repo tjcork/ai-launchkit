@@ -1,0 +1,9 @@
+{
+  "name": "obsidian",
+  "category": "File & Document Management",
+  "description": "Obsidian LiveSync (Self-hosted sync server for Obsidian using CouchDB)",
+  "use_cases": "Sync Obsidian notes across devices, self-hosted Notion alternative, markdown knowledge base",
+  "interface": "obsidian.<yourdomain>.com",
+  "source": "https://github.com/vrtmrz/obsidian-livesync",
+  "depends_on": []
+}

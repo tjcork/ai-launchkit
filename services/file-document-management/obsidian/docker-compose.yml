@@ -1,0 +1,21 @@
+services:
+  obsidian-couchdb:
+    image: couchdb:3
+    container_name: obsidian-couchdb
+    profiles:
+      - obsidian
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - COUCHDB_USER=${OBSIDIAN_COUCHDB_USER}
+      - COUCHDB_PASSWORD=${OBSIDIAN_COUCHDB_PASSWORD}
+    volumes:
+      - ./data/couchdb:/opt/couchdb/data
+      - ./config/local/couchdb.ini:/opt/couchdb/etc/local.d/local.ini:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:5984/_up || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
