@@ -1,0 +1,9 @@
+{
+  "name": "mcp-gateway",
+  "category": "AI Agents",
+  "description": "MCP Context Forge - Model Context Protocol Gateway & Registry",
+  "use_cases": "Protocol translation, MCP server federation, REST/gRPC to MCP conversion, AI agent integration",
+  "interface": "mcpgateway.<yourdomain>.com",
+  "source": "https://github.com/IBM/mcp-context-forge",
+  "depends_on": []
+}
